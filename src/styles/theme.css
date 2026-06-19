@@ -1,0 +1,789 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --popover: #ffffff;
+  --popover-foreground: #1a1a1a;
+
+  /* Couleurs principales */
+  --primary: #0066FF;
+  --primary-foreground: #ffffff;
+  --orange: #FF8A00;
+  --pink: #FF3FA4;
+  --green: #00C853;
+  --gold: #E8B21A;
+
+  /* Couleurs secondaires */
+  --blue: #4A90E2;
+  --yellow: #FFE26A;
+  --purple: #B57CFF;
+
+  --secondary: #F7F7F7;
+  --secondary-foreground: #1a1a1a;
+  --muted: #F7F7F7;
+  --muted-foreground: #717182;
+  --accent: #FF8A00;
+  --accent-foreground: #ffffff;
+  --destructive: #0066FF;
+  --destructive-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.1);
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 600;
+  --font-weight-normal: 400;
+  --ring: #FF8A00;
+  --chart-1: #0066FF;
+  --chart-2: #FF8A00;
+  --chart-3: #00C853;
+  --chart-4: #4A90E2;
+  --chart-5: #E8B21A;
+  --radius: 1.25rem;
+  --sidebar: #F7F7F7;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #0066FF;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #FF8A00;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(0, 0, 0, 0.1);
+  --sidebar-ring: #FF8A00;
+
+  /* === X (Twitter) design tokens — override en queue de :root === */
+  --x-bg: #ffffff;
+  --x-fg: #0F1419;
+  --x-muted: #536471;
+  --x-border: #EFF3F4;
+  --x-hover: #F7F9F9;
+  --x-blue: #1D9BF0;
+  --x-blue-hover: #1A8CD8;
+  --x-pink: #F91880;
+  --x-green: #00BA7C;
+
+  --background: var(--x-bg);
+  --foreground: var(--x-fg);
+  --card: var(--x-bg);
+  --card-foreground: var(--x-fg);
+  --popover: var(--x-bg);
+  --popover-foreground: var(--x-fg);
+  --primary: var(--x-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--x-hover);
+  --secondary-foreground: var(--x-fg);
+  --muted: var(--x-hover);
+  --muted-foreground: var(--x-muted);
+  --accent: var(--x-blue);
+  --accent-foreground: #ffffff;
+  --border: var(--x-border);
+  --ring: var(--x-blue);
+  --radius: 9999px;
+  --r-pill: 9999px;
+  --r-xl: 16px;
+  --r-md: 12px;
+  --r-sm: 4px;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+
+  /* === X "Lights out" === */
+  --x-bg: #000000;
+  --x-fg: #E7E9EA;
+  --x-muted: #71767B;
+  --x-border: #2F3336;
+  --x-hover: #16181C;
+  --x-blue: #1D9BF0;
+  --x-blue-hover: #1A8CD8;
+
+  --background: var(--x-bg);
+  --foreground: var(--x-fg);
+  --card: var(--x-bg);
+  --card-foreground: var(--x-fg);
+  --popover: #16181C;
+  --popover-foreground: var(--x-fg);
+  --primary: var(--x-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--x-hover);
+  --secondary-foreground: var(--x-fg);
+  --muted: var(--x-hover);
+  --muted-foreground: var(--x-muted);
+  --accent: var(--x-blue);
+  --accent-foreground: #ffffff;
+  --border: var(--x-border);
+  --ring: var(--x-blue);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: var(--text-xl);
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-family: 'Poppins', sans-serif;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-family: 'Poppins', sans-serif;
+    font-size: var(--text-base);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  label {
+    font-family: 'Inter', sans-serif;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-family: 'Montserrat', sans-serif;
+    font-size: var(--text-base);
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Native mobile defaults — iOS/Android HIG */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
+}
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 0.08s ease-out;
+}
+
+/* Soft 12px rounding (iOS continuous-corner feel). Media (img/video/canvas) inherit
+   their radius from their overflow-hidden parent — never round them globally, or they
+   create a visible inset box inside hero/cover frames. */
+button, input:not([type="range"]), textarea, select {
+  border-radius: 12px;
+}
+input[type="range"] { border-radius: 9999px; }
+
+/* Safe-area helpers */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pl-safe { padding-left: env(safe-area-inset-left); }
+.pr-safe { padding-right: env(safe-area-inset-right); }
+.h-safe-top { height: env(safe-area-inset-top); }
+
+/* Hide scrollbars on horizontal carousels by default on touch */
+@media (hover: none) {
+  ::-webkit-scrollbar { display: none; }
+}
+
+/*
+ * IPPOO radius scale — source de vérité pour les arrondis.
+ *   --r-pill : pastilles, chips, tags
+ *   --r-xs   : mini-icônes, petits badges
+ *   --r-sm   : boutons compacts, inputs, miniatures
+ *   --r-md   : contrôles, tuiles, segmented controls
+ *   --r-lg   : cartes, listes
+ *   --r-xl   : hero, sheets, surfaces premium
+ *
+ * Règles d'usage :
+ *   - Continuité : un enfant ne doit jamais être plus arrondi que son parent.
+ *   - Pastilles (chips, badges, statuts) : --r-pill (full).
+ *   - Conteneurs neutres (FAFAFA, F0F0F0, F2F2F5) : --r-md par défaut.
+ *   - Cartes blanches bordées : --r-lg (déjà appliqué via la règle premium).
+ *   - Hero & bottom sheets : --r-xl (top-only pour les sheets).
+ */
+:root {
+  --r-pill: 999px;
+  --r-xs: 10px;
+  --r-sm: 12px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  /* Apple-inspired refinements */
+  --ios-blue: #007AFF;
+  --ios-gray-bg: #F2F2F7;
+  --ios-gray-2: #E5E5EA;
+  --ios-gray-3: #C7C7CC;
+  --ios-label-secondary: #6E6E73;
+  --ios-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -16px rgba(16, 24, 40, 0.08);
+  --ios-shadow-elev: 0 1px 0 rgba(16, 24, 40, 0.03), 0 12px 40px -20px rgba(16, 24, 40, 0.18);
+}
+
+/* Harmonisation : conteneurs neutres uniformément arrondis */
+[class*="bg-[#FAFAFA]"]:not(input):not(textarea):not(.no-radius),
+[class*="bg-[#F0F0F0]"]:not(.no-radius),
+[class*="bg-[#F2F2F5]"]:not(.no-radius) {
+  border-radius: var(--r-md);
+}
+
+/* Premium surface system (applied app-wide) — Apple-style elevation */
+.bg-white.border.border-\[\#F0F0F0\],
+.bg-white.border.border-\[\#EFEFEF\] {
+  border-color: transparent !important;
+  border-radius: var(--r-lg);
+  box-shadow: var(--ios-shadow-card);
+}
+.dark .bg-white.border.border-\[\#F0F0F0\],
+.dark .bg-white.border.border-\[\#EFEFEF\] {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px -16px rgba(0,0,0,0.6);
+}
+
+/* Eyebrow label */
+.ippoo-eyebrow {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #0066FF;
+  text-transform: uppercase;
+}
+
+/* Section header pill accent */
+.ippoo-accent-pill {
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  border-radius: 999px;
+  background: #0066FF;
+}
+
+/* Soften default borders on inner dividers for a more premium feel */
+.divide-\[\#F5F5F5\] > * + * { border-color: rgba(0,0,0,0.04) !important; }
+
+/* Dark mode (applied via .dark class on root container) */
+.dark { color-scheme: dark; }
+
+/* Sweeping rule: force all text to white in dark mode, regardless of class or inline color.
+ * Excludes elements where color is intentional (brand buttons, badges with colored bg). */
+.dark, .dark *:not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon) {
+  color: #F5F5F7 !important;
+}
+/* Keep brand-colored text where it sits on a neutral bg (eyebrow, links, accents) */
+.dark .text-\[\#0066FF\] { color: #6FA8FF !important; }
+.dark .text-\[\#FF8A00\] { color: #FFB04A !important; }
+.dark .text-\[\#FF3FA4\] { color: #FF7AC2 !important; }
+.dark .text-\[\#00C853\] { color: #5BD98A !important; }
+.dark .text-\[\#FF3B30\] { color: #FF7368 !important; }
+.dark .text-\[\#E8B21A\] { color: #F0C84A !important; }
+/* Text-white stays white on colored buttons/heroes */
+.dark .text-white { color: #FFFFFF !important; }
+.dark .bg-white { background-color: #15101F !important; }
+.dark .bg-\[\#FAFAFA\] { background-color: #1C1530 !important; }
+.dark .border-\[\#F0F0F0\] { border-color: rgba(255,255,255,0.08) !important; }
+.dark .border-\[\#EFEFEF\] { border-color: rgba(255,255,255,0.08) !important; }
+.dark .divide-\[\#F5F5F5\] > * + * { border-color: rgba(255,255,255,0.06) !important; }
+.dark .text-\[\#1a1a1a\] { color: #F5F5F7 !important; }
+.dark .text-\[\#717182\] { color: #9A9AB0 !important; }
+.dark .bg-\[\#F7F7F7\] { background-color: #1C1530 !important; }
+.dark .bg-\[\#F0F0F0\] { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-\[\#E5E5E5\] { background-color: rgba(255,255,255,0.12) !important; }
+.dark body, .dark { background-color: #0F0A1F; }
+.dark .bg-\[\#F4F4F6\] { background-color: #1C1530 !important; }
+.dark .bg-\[\#F5F5F5\] { background-color: rgba(255,255,255,0.06) !important; }
+.dark .border-\[\#F5F5F5\] { border-color: rgba(255,255,255,0.06) !important; }
+.dark .bg-white\/95 { background-color: rgba(21,16,31,0.95) !important; }
+.dark .bg-white\/90 { background-color: rgba(21,16,31,0.9) !important; }
+.dark .bg-white\/80 { background-color: rgba(21,16,31,0.8) !important; }
+.dark .bg-white\/70 { background-color: rgba(21,16,31,0.7) !important; }
+.dark .bg-white\/60 { background-color: rgba(21,16,31,0.6) !important; }
+.dark .bg-white\/50 { background-color: rgba(21,16,31,0.5) !important; }
+.dark .bg-white\/40 { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-white\/30 { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-white\/25 { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-white\/20 { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-white\/15 { background-color: rgba(255,255,255,0.08) !important; }
+.dark .bg-white\/10 { background-color: rgba(255,255,255,0.06) !important; }
+.dark .bg-white\/5  { background-color: rgba(255,255,255,0.04) !important; }
+.dark .ring-white\/30 { --tw-ring-color: rgba(255,255,255,0.18) !important; }
+.dark input, .dark textarea, .dark select { color: #F5F5F7; }
+.dark input::placeholder, .dark textarea::placeholder { color: #6E6E85; }
+
+/* Additional neutrals frequently used as surfaces */
+.dark .bg-\[\#F8F8F8\],
+.dark .bg-\[\#FAFAFB\],
+.dark .bg-\[\#FBFBFC\],
+.dark .bg-\[\#F2F2F5\],
+.dark .bg-\[\#F1F1F1\],
+.dark .bg-\[\#EFEFEF\],
+.dark .bg-\[\#EEEEEE\] { background-color: #1C1530 !important; }
+
+.dark .bg-\[\#1a1a1a\] { background-color: #1C1530 !important; }
+.dark .bg-black { background-color: #0F0A1F !important; }
+.dark .bg-black\/5 { background-color: rgba(255,255,255,0.05) !important; }
+.dark .bg-black\/10 { background-color: rgba(255,255,255,0.08) !important; }
+
+.dark .border-\[\#E5E5E5\],
+.dark .border-\[\#EAEAEA\],
+.dark .border-\[\#E0E0E0\],
+.dark .border-\[\#DDDDDD\] { border-color: rgba(255,255,255,0.08) !important; }
+
+.dark .text-black { color: #F5F5F7 !important; }
+.dark .text-\[\#000\],
+.dark .text-\[\#000000\] { color: #F5F5F7 !important; }
+.dark .text-\[\#0a0a0a\],
+.dark .text-\[\#111\],
+.dark .text-\[\#111111\],
+.dark .text-\[\#222\],
+.dark .text-\[\#333\] { color: #F5F5F7 !important; }
+.dark .text-\[\#666\],
+.dark .text-\[\#777\],
+.dark .text-\[\#888\],
+.dark .text-\[\#999\],
+.dark .text-\[\#9CA3AF\],
+.dark .text-\[\#6B7280\],
+.dark .text-\[\#A0A0A8\] { color: #9A9AB0 !important; }
+
+/* Inline-style overrides (style="color:#1a1a1a") — class selectors can't catch these.
+ * React may serialize hex inline-styles to rgb(); cover both forms. */
+.dark [style*="#1a1a1a"][style*="color"],
+.dark [style*="#0F0A1F"][style*="color"],
+.dark [style*="#0f0a1f"][style*="color"],
+.dark [style*="rgb(26, 26, 26)"],
+.dark [style*="rgb(15, 10, 31)"],
+.dark [style*="#000"][style*="color"],
+.dark [style*="#111"][style*="color"],
+.dark [style*="#222"][style*="color"],
+.dark [style*="rgb(0, 0, 0)"][style*="color"] { color: #F5F5F7 !important; }
+
+.dark [style*="#717182"][style*="color"],
+.dark [style*="#6B7280"][style*="color"],
+.dark [style*="#717185"][style*="color"],
+.dark [style*="rgb(113, 113, 130)"],
+.dark [style*="rgb(107, 114, 128)"] { color: #9A9AB0 !important; }
+
+.dark [style*="color: #0F0A1F"],
+.dark [style*="color:#0F0A1F"] { color: #F5F5F7 !important; }
+.dark [style*="background: #0F0A1F"],
+.dark [style*="background-color: #0F0A1F"] { background-color: #1C1530 !important; }
+
+.dark [style*="background: #ffffff"],
+.dark [style*="background:#ffffff"],
+.dark [style*="background: #fff"],
+.dark [style*="background:#fff"],
+.dark [style*="background-color: #ffffff"],
+.dark [style*="background-color:#ffffff"],
+.dark [style*="background-color: #fff"] { background-color: #15101F !important; }
+
+.dark [style*="background: #1a1a1a"],
+.dark [style*="background:#1a1a1a"],
+.dark [style*="background-color: #1a1a1a"] { background-color: #1C1530 !important; }
+
+.dark [style*="background: #FAFAFA"],
+.dark [style*="background:#FAFAFA"],
+.dark [style*="background: #F7F7F7"],
+.dark [style*="background: #F0F0F0"],
+.dark [style*="background: #F5F5F5"],
+.dark [style*="background: #F4F4F6"],
+.dark [style*="background-color: #FAFAFA"],
+.dark [style*="background-color: #F7F7F7"] { background-color: #1C1530 !important; }
+
+.dark [style*="border-color: #F0F0F0"],
+.dark [style*="border-color: #EFEFEF"],
+.dark [style*="border-color: #F5F5F5"],
+.dark [style*="border-color: #E5E5E5"],
+.dark [style*="border-color: #EAEAEA"] { border-color: rgba(255,255,255,0.08) !important; }
+
+/* Premium card surfaces & sheets that hardcode dark backgrounds remain ok in dark mode */
+
+/* Skeletons / placeholders */
+.dark .bg-gray-100,
+.dark .bg-gray-200 { background-color: rgba(255,255,255,0.06) !important; }
+.dark .bg-gray-50 { background-color: #1C1530 !important; }
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 { color: #F5F5F7 !important; }
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400 { color: #9A9AB0 !important; }
+
+/* Soft tinted overlays based on brand colors — tone them down so they read in dark mode */
+.dark [class*="/8"][class*="bg-[#0066FF]"],
+.dark [class*="/10"][class*="bg-[#0066FF]"] { background-color: rgba(0,102,255,0.18) !important; }
+.dark [class*="/10"][class*="bg-[#FF3FA4]"] { background-color: rgba(255,63,164,0.18) !important; }
+.dark [class*="/10"][class*="bg-[#00C853]"] { background-color: rgba(0,200,83,0.18) !important; }
+.dark [class*="/10"][class*="bg-[#FF8A00]"] { background-color: rgba(255,138,0,0.18) !important; }
+
+/* Soft brand-tinted surfaces (chips, callouts) */
+.dark .bg-\[\#E5EFFF\] { background-color: rgba(0,102,255,0.18) !important; }
+.dark .text-\[\#0066FF\].bg-\[\#E5EFFF\] { color: #6FA8FF !important; }
+.dark .bg-\[\#E5F8EC\],
+.dark .bg-\[\#D4F4E0\] { background-color: rgba(0,200,83,0.18) !important; }
+.dark .bg-\[\#FDE8E6\],
+.dark .bg-\[\#FFE5E3\],
+.dark .bg-\[\#FFF5F4\] { background-color: rgba(255,59,48,0.18) !important; }
+
+/* Faint light borders & text-on-light */
+.dark .border-\[\#D5D5DC\],
+.dark .border-\[\#E5E5EA\],
+.dark .border-\[\#F4F4F6\] { border-color: rgba(255,255,255,0.08) !important; }
+.dark .text-\[\#C7C7CF\] { color: #6E6E85 !important; }
+
+/* Near-black text/fills used in light mode → light tones in dark mode */
+.dark .text-\[\#0F0A1F\] { color: #F5F5F7 !important; }
+.dark .fill-\[\#0F0A1F\] { fill: #F5F5F7 !important; }
+
+/* Gradients that start from a light neutral — flip to dark surface */
+.dark .from-\[\#FAFAFA\],
+.dark .from-\[\#F7F7F7\],
+.dark .from-white { --tw-gradient-from: #1C1530 !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(28,21,48,0)) !important; }
+.dark .to-white { --tw-gradient-to: #1C1530 !important; }
+.dark .via-white { --tw-gradient-via: #1C1530 !important; }
+
+/* Hover surfaces */
+.dark .hover\:bg-\[\#FAFAFA\]:hover,
+.dark .hover\:bg-\[\#F7F7F7\]:hover,
+.dark .hover\:bg-\[\#F5F5F5\]:hover,
+.dark .hover\:bg-\[\#F0F0F0\]:hover { background-color: rgba(255,255,255,0.06) !important; }
+.dark .hover\:bg-white:hover { background-color: #1C1530 !important; }
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.06) !important; }
+
+/* Shadows on cards — soften vs. light-mode rgba(0,0,0,…) */
+.dark .shadow-sm,
+.dark .shadow,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl { --tw-shadow-color: rgba(0,0,0,0.6) !important; box-shadow: 0 8px 24px -12px rgba(0,0,0,0.6) !important; }
+
+/* Global radius harmonisation — fill the gaps */
+button[class*="bg-[#0066FF]"],
+button[class*="bg-[#1a1a1a]"],
+button[class*="bg-[#0F0A1F]"],
+button[class*="bg-[#00C853]"],
+button[class*="bg-[#FF3B30]"],
+button[class*="bg-[#FF8A00]"],
+button[class*="bg-[#FF3FA4]"],
+button[class*="bg-[#9B51E0]"],
+button[class*="bg-[#E5EFFF]"],
+button[class*="bg-black/"]:not([class*="rounded"]):not([style*="border-radius"]) {
+  border-radius: var(--r-sm);
+}
+button[class*="rounded-full"],
+button[class*="border-radius:999"] { border-radius: 999px !important; }
+
+/* Image containers without explicit radius */
+div.overflow-hidden:not([style*="border-radius"]):not([class*="rounded"]):has(> img),
+div.overflow-hidden:not([style*="border-radius"]):not([class*="rounded"]):has(> picture) {
+  border-radius: var(--r-sm);
+}
+
+/* Inputs & textareas */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea, select {
+  border-radius: var(--r-sm);
+}
+
+/* Generic solid buttons & chips inside white card surfaces */
+.bg-white button[class*="bg-[#FAFAFA]"],
+.bg-white button[class*="bg-[#F0F0F0]"] { border-radius: var(--r-sm); }
+
+/* Catch-all: any button or anchor without explicit radius gets a small one */
+button:not([class*="rounded"]):not([style*="border-radius"]),
+a[class*="bg-"]:not([class*="rounded"]):not([style*="border-radius"]) {
+  border-radius: var(--r-sm);
+}
+
+/* Tag-like spans with background colors (badges, chips, pills) */
+span[class*="bg-["]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="w-1"]):not([class*="h-1"]):not([class*="w-2 "]):not([class*="h-2 "]) {
+  border-radius: var(--r-xs);
+}
+
+/* Generic surface divs with neutral backgrounds */
+div[class*="bg-[#FAFAFA]"]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]):not([class*="inset-"]),
+div[class*="bg-[#F4F4F6]"]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]),
+div[class*="bg-[#F0F0F0]"]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]),
+div[class*="bg-[#F5F5F5]"]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]),
+div[class*="bg-[#FAFAFB]"]:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]) {
+  border-radius: var(--r-sm);
+}
+
+/* Direct images (not inside overflow-hidden wrappers handled above) */
+img:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]):not([class*="object-cover"]) {
+  border-radius: var(--r-xs);
+}
+
+/* ============================================================
+   APPLE-LIKE POLISH — global pass
+   Hairline dividers, iOS blue, generous radii, soft elevation,
+   refined typographic tracking, frosted bars.
+   ============================================================ */
+
+/* 1. Replace IPPOO blue with iOS system blue for a calmer accent */
+.bg-\[\#0066FF\] { background-color: var(--ios-blue) !important; }
+.text-\[\#0066FF\] { color: var(--ios-blue) !important; }
+.border-\[\#0066FF\] { border-color: var(--ios-blue) !important; }
+.ring-\[\#0066FF\] { --tw-ring-color: var(--ios-blue) !important; }
+.fill-\[\#0066FF\] { fill: var(--ios-blue) !important; }
+.from-\[\#0066FF\] { --tw-gradient-from: var(--ios-blue) !important; }
+.to-\[\#0066FF\] { --tw-gradient-to: var(--ios-blue) !important; }
+[style*="#0066FF"] { /* leave inline-style instances alone, often intentional */ }
+
+/* 2. Soft app background — iOS grouped-list neutral */
+body {
+  background-color: var(--ios-gray-bg);
+}
+.dark body { background-color: #0F0A1F; }
+
+/* 3. Hairline borders — iOS separator scale (more visible) */
+.border-\[\#F0F0F0\],
+.border-\[\#EFEFEF\],
+.border-\[\#EAEAEE\],
+.border-\[\#E5E5E5\],
+.border-\[\#EAEAEA\] {
+  border-color: rgba(60, 60, 67, 0.18) !important;
+}
+.divide-\[\#F5F5F5\] > * + *,
+.divide-\[\#F0F0F0\] > * + *,
+.divide-\[\#EAEAEE\] > * + * {
+  border-color: rgba(60, 60, 67, 0.18) !important;
+}
+/* Override the earlier "premium" softener that hid divider lines */
+.divide-\[\#F5F5F5\] > * + * { border-color: rgba(60, 60, 67, 0.18) !important; }
+
+/* 4. Typography refinement — SF Pro-like tracking & weight */
+h1 { letter-spacing: -0.022em; }
+h2 { letter-spacing: -0.020em; }
+h3, h4 { letter-spacing: -0.014em; }
+body, p, button, input, label, span, div { -webkit-font-smoothing: antialiased; }
+
+/* 5. Generous rounded cards — iOS continuous-corner feel */
+.bg-white:not([class*="rounded"]):not([style*="border-radius"]):not([class*="absolute"]):not(button):not(input):not(textarea) {
+  /* leave content alone unless it's a clearly card-like surface */
+}
+
+/* 6. Make solid primary buttons feel like iOS pill/SF Symbols buttons */
+button[class*="bg-[#0066FF]"]:not([class*="rounded-full"]):not([style*="border-radius: 999"]):not([style*="borderRadius: 999"]) {
+  border-radius: 14px;
+}
+
+/* 7. Native transparency preserved — bg-white/X, bg-black/X and backdrop-blur
+   utilities work as Tailwind intends. Dark-mode tinting for bg-white/X is
+   handled in the dark-mode block above. */
+
+/* 8. Refined elevated surfaces (sheets, modals, popovers) */
+[class*="rounded-2xl"][class*="bg-white"],
+[class*="rounded-3xl"][class*="bg-white"] {
+  box-shadow: var(--ios-shadow-elev);
+}
+
+/* 9. iOS-style segmented control — when devs use a divided pill row */
+[class*="bg-[#F4F4F6]"][class*="p-1"],
+[class*="bg-[#FAFAFA]"][class*="p-1"] {
+  border-radius: 10px;
+}
+
+/* 10. Native-style input fields — opaque, hairline border */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea, select {
+  border-radius: 12px;
+  background-color: #F2F2F7;
+  border: 1px solid rgba(60, 60, 67, 0.12);
+}
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus, select:focus {
+  outline: none;
+  background-color: #FFFFFF;
+  border-color: var(--ios-blue);
+}
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea, .dark select {
+  background-color: #1C1530;
+  border-color: rgba(255,255,255,0.10);
+}
+
+/* 11. Press feedback — slightly softer */
+button:active:not(:disabled) {
+  transform: scale(0.975);
+  transition: transform 0.12s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* 12. Muted secondary text — iOS system "secondary label" */
+.text-\[\#717182\] { color: var(--ios-label-secondary) !important; }
+
+/* 13. Smoother focus rings */
+:focus-visible {
+  outline: 2px solid var(--ios-blue);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* 14. Bottom-sheet & modal corner radii — iOS-style large continuous corners */
+[style*="borderRadius: '14px 14px 0 0'"],
+[style*="border-radius: 14px 14px 0 0"] {
+  border-radius: 18px 18px 0 0 !important;
+}
+
+/* 15. Admin sidebar — refine borders & spacing */
+.bg-\[\#F7F7FA\] { background-color: var(--ios-gray-bg) !important; }
+
+/* 16. Dark backgrounds in light mode often used as "noir profond" — keep them but bump radius */
+[style*="background: '#1a1a1a'"][class*="rounded"],
+[style*="background: '#0F0A1F'"][class*="rounded"] { box-shadow: var(--ios-shadow-elev); }
+
+/* 17. List rows — refined hover state */
+button.flex.items-center.gap-3.px-4.py-3\.5:hover,
+button.flex.items-center.gap-3.px-4.py-3:hover { background-color: rgba(60,60,67,0.04); }
+
+/* 18. Anchor/link buttons inherit cleaner radius */
+a[class*="bg-["]:not([class*="rounded-full"]):not([style*="border-radius: 999"]) {
+  border-radius: 12px;
+}
+
+/* 19. Skeleton/loaders smoother */
+.animate-pulse { animation-duration: 1.6s; }
+
+/* 20. Feed separators — hairline between consecutive article cards
+   Targets the common pattern: <section class="... space-y-*"> with white card buttons. */
+section[class*="space-y-"] > button[class*="bg-white"][class*="text-left"] + button[class*="bg-white"][class*="text-left"],
+section[class*="space-y-"] > a[class*="bg-white"][class*="block"] + a[class*="bg-white"][class*="block"],
+div[class*="space-y-"] > button[class*="bg-white"][class*="text-left"] + button[class*="bg-white"][class*="text-left"] {
+  position: relative;
+}
+section[class*="space-y-"] > button[class*="bg-white"][class*="text-left"] + button[class*="bg-white"][class*="text-left"]::before,
+section[class*="space-y-"] > a[class*="bg-white"][class*="block"] + a[class*="bg-white"][class*="block"]::before,
+div[class*="space-y-"] > button[class*="bg-white"][class*="text-left"] + button[class*="bg-white"][class*="text-left"]::before {
+  content: '';
+  position: absolute;
+  top: -7px;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: rgba(60, 60, 67, 0.18);
+  pointer-events: none;
+}
+.dark section[class*="space-y-"] > button[class*="bg-white"][class*="text-left"] + button[class*="bg-white"][class*="text-left"]::before {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+/* 21. Stacked items in flex-col feeds without a wrapping spacing utility */
+.flex.flex-col > article + article,
+.flex.flex-col > .card + .card {
+  border-top: 1px solid rgba(60, 60, 67, 0.18);
+}
