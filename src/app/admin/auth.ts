@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { safeStorage, STORAGE_KEYS } from '../lib/storage-safe';
-import { signIn as apiSignIn, signOut as apiSignOut, getMe } from '../lib/api';
+import { adminLogin, adminVerify, adminLogout } from '../lib/api';
 
 const KEY = STORAGE_KEYS.adminAuth;
 const ATTEMPT_KEY = STORAGE_KEYS.adminAttempts;
@@ -10,7 +10,7 @@ const LOCK_DURATION = 5 * 60 * 1000;
 
 export interface AdminSession {
   email: string;
-  role: 'admin' | 'editor';
+  role: 'admin';
   loggedAt: number;
   expiresAt: number;
 }
@@ -51,6 +51,24 @@ export function useAdminAuth() {
     };
   }, []);
 
+  // Défense en profondeur : ne jamais faire confiance au seul localStorage.
+  // Au montage, on revalide le jeton admin auprès du serveur (source de vérité
+  // = ADMIN_EMAILS + signature). Si le jeton est absent/expiré/révoqué, on
+  // efface la session locale — une entrée localStorage forgée n'affiche donc
+  // même pas la coquille admin.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!read()) return;
+      try {
+        await adminVerify();
+      } catch {
+        if (!cancelled) { safeStorage.remove(KEY); setSession(null); adminLogout(); }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const login = useCallback(async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
     const att = readAttempts();
     if (att.lockedUntil > Date.now()) {
@@ -59,19 +77,17 @@ export function useAdminAuth() {
     }
     const norm = email.trim().toLowerCase();
     try {
-      await apiSignIn(norm, password);
-      const { user } = await getMe();
-      const role = (user.role === 'admin' || user.role === 'editor') ? user.role : null;
-      if (!role) {
-        await apiSignOut().catch(() => undefined);
-        const next = att.count + 1;
-        const locked = next >= MAX_ATTEMPTS;
-        writeAttempts({ count: locked ? 0 : next, lockedUntil: locked ? Date.now() + LOCK_DURATION : 0 });
-        return { ok: false, error: 'Accès refusé : ce compte n\'a pas de rôle administrateur.' };
-      }
+      // Flux admin pur : validé serveur contre ADMIN_EMAILS + ADMIN_PASSWORD.
+      // Aucun appel à Supabase Auth → un compte utilisateur ne peut pas entrer.
+      const res = await adminLogin(norm, password);
       writeAttempts({ count: 0, lockedUntil: 0 });
       const now = Date.now();
-      const s: AdminSession = { email: norm, role, loggedAt: now, expiresAt: now + SESSION_TTL };
+      const s: AdminSession = {
+        email: res.email ?? norm,
+        role: 'admin',
+        loggedAt: now,
+        expiresAt: res.expiresAt ?? now + SESSION_TTL,
+      };
       safeStorage.set(KEY, s);
       setSession(s);
       return { ok: true };
@@ -85,7 +101,7 @@ export function useAdminAuth() {
   }, []);
 
   const logout = useCallback(async () => {
-    await apiSignOut().catch(() => undefined);
+    adminLogout();
     safeStorage.remove(KEY);
     setSession(null);
   }, []);

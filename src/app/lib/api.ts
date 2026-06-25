@@ -63,6 +63,23 @@ async function getAccessToken(): Promise<string> {
   return data.session?.access_token ?? publicAnonKey;
 }
 
+// ---------- Jeton admin (flux totalement séparé du flux utilisateur) ----------
+// Émis par POST /admin/auth/login, envoyé via le header X-Admin-Token sur
+// CHAQUE requête quand il est présent. Les routes admin du serveur n'acceptent
+// que ce jeton ; un utilisateur Supabase, lui, n'en a jamais.
+const ADMIN_TOKEN_LS = 'ippoo_admin_token';
+let _adminToken: string | null =
+  (typeof localStorage !== 'undefined' ? localStorage.getItem(ADMIN_TOKEN_LS) : null);
+
+export function setAdminToken(token: string | null) {
+  _adminToken = token;
+  try {
+    if (token) localStorage.setItem(ADMIN_TOKEN_LS, token);
+    else localStorage.removeItem(ADMIN_TOKEN_LS);
+  } catch { /* stockage indisponible */ }
+}
+export function getAdminToken(): string | null { return _adminToken; }
+
 interface ApiOptions {
   method?: string;
   body?: unknown;
@@ -101,12 +118,17 @@ function ensureDrainListener() {
 
 async function fetchOnce<T>(path: string, opts: ApiOptions): Promise<T> {
   const token = opts.auth === false ? publicAnonKey : await getAccessToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+  // Le jeton admin est transmis en parallèle du Bearer utilisateur. Les routes
+  // admin l'exigent ; les routes utilisateur l'ignorent. Les deux flux restent
+  // donc strictement indépendants.
+  if (_adminToken) headers["X-Admin-Token"] = _adminToken;
   const res = await fetch(`${SERVER_BASE}${path}`, {
     method: opts.method ?? "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
   });
@@ -198,6 +220,27 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
     // Final fallback if cache was empty: rethrow so callers can show an error.
     throw e;
   }
+}
+
+// ============== ADMIN AUTH (séparé du flux utilisateur) ==============
+// Ne touche JAMAIS à Supabase Auth : valide les identifiants contre
+// ADMIN_EMAILS/ADMIN_PASSWORD côté serveur et récupère un jeton admin signé.
+export async function adminLogin(email: string, password: string) {
+  const res = await api<{ token: string; email: string; expiresAt: number }>(
+    "/admin/auth/login",
+    { method: "POST", body: { email, password }, auth: false, queue: false },
+  );
+  setAdminToken(res.token);
+  return res;
+}
+
+export async function adminVerify() {
+  // Renvoie l'identité admin si le jeton stocké est encore valide, sinon throw.
+  return api<{ email: string; role: string }>("/admin/auth/me");
+}
+
+export function adminLogout() {
+  setAdminToken(null);
 }
 
 // ============== AUTH ==============

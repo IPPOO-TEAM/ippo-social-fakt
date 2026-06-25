@@ -227,13 +227,85 @@ async function requireUser(req: Request) {
   return { ok: true as const, user: u };
 }
 
-async function requireAdmin(req: Request) {
-  const r = await requireUser(req);
-  if (!r.ok) return r;
-  if (r.user.role !== "admin" && r.user.role !== "editor") {
-    return { ok: false as const, status: 403, msg: "Forbidden: admin/editor only" };
+// ============== ADMIN AUTH (FLUX COMPLÈTEMENT SÉPARÉ) ==============
+// L'admin n'est PAS un utilisateur Supabase. Il s'authentifie contre une
+// liste d'emails autorisés (ADMIN_EMAILS) + un mot de passe partagé
+// (ADMIN_PASSWORD), tous deux lus côté serveur uniquement. À la connexion, le
+// serveur émet un jeton admin signé (HMAC-SHA256) totalement distinct du JWT
+// utilisateur. Un compte utilisateur, quel que soit son rôle, ne peut donc
+// JAMAIS accéder à l'admin : les routes admin n'acceptent que ce jeton.
+const ADMIN_EMAILS = (Deno.env.get("ADMIN_EMAILS") ?? "")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+const ADMIN_PASSWORD = Deno.env.get("ADMIN_PASSWORD") ?? "";
+const ADMIN_SESSION_SECRET =
+  Deno.env.get("ADMIN_SESSION_SECRET") ?? Deno.env.get("JWT_SECRET") ?? SERVICE_ROLE;
+const ADMIN_TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+
+const b64url = {
+  enc: (data: Uint8Array | string) => {
+    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+    return btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  },
+  dec: (s: string) => {
+    const pad = s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4);
+    return Uint8Array.from(atob(pad), (c) => c.charCodeAt(0));
+  },
+};
+
+async function hmac(data: string): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(ADMIN_SESSION_SECRET),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return new Uint8Array(sig);
+}
+
+// Comparaison à temps constant (anti timing-attack sur le mot de passe).
+function timingSafeEqual(a: string, b: string): boolean {
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
+async function mintAdminToken(email: string): Promise<string> {
+  const payload = JSON.stringify({ email, exp: Date.now() + ADMIN_TOKEN_TTL_MS });
+  const body = b64url.enc(payload);
+  const sig = b64url.enc(await hmac(body));
+  return `${body}.${sig}`;
+}
+
+async function verifyAdminToken(token: string | undefined | null): Promise<{ email: string } | null> {
+  if (!token || !token.includes(".")) return null;
+  const [body, sig] = token.split(".");
+  try {
+    const expected = b64url.enc(await hmac(body));
+    if (!timingSafeEqual(sig, expected)) return null;
+    const payload = JSON.parse(new TextDecoder().decode(b64url.dec(body)));
+    if (!payload?.email || typeof payload.exp !== "number") return null;
+    if (Date.now() > payload.exp) return null;
+    // Le mail doit TOUJOURS être dans la liste autorisée (révocation instantanée
+    // si on retire un email de ADMIN_EMAILS, même si le jeton n'est pas expiré).
+    if (!ADMIN_EMAILS.includes(String(payload.email).toLowerCase())) return null;
+    return { email: payload.email };
+  } catch {
+    return null;
   }
-  return r;
+}
+
+// Garde des routes admin : n'accepte QUE le jeton admin (header X-Admin-Token).
+// Renvoie une identité admin synthétique (pas un utilisateur Supabase).
+async function requireAdmin(req: Request) {
+  const token = req.headers.get("X-Admin-Token");
+  const admin = await verifyAdminToken(token);
+  if (!admin) return { ok: false as const, status: 401, msg: "Admin non autorisé" };
+  return {
+    ok: true as const,
+    user: { id: `admin:${admin.email}`, email: admin.email, role: "admin" as const },
+  };
 }
 
 // ============== RATE LIMITING ==============
@@ -273,6 +345,50 @@ function rateLimitResponse(c: any, r: RateResult) {
 
 // ============== HEALTH ==============
 app.get(`${PREFIX}/health`, (c) => c.json({ status: "ok", time: new Date().toISOString() }));
+
+// ============== ADMIN AUTH ROUTES (séparées du flux utilisateur) ==============
+// Connexion admin : email ∈ ADMIN_EMAILS + mot de passe == ADMIN_PASSWORD,
+// vérifiés côté serveur. Aucun lien avec Supabase Auth. Rate-limité par IP
+// et par email pour empêcher le brute-force.
+app.post(`${PREFIX}/admin/auth/login`, async (c) => {
+  const ip = clientIp(c.req.raw);
+  const rlIp = await rateLimit("admin_login_ip", ip, 10, 15 * 60 * 1000);
+  if (!rlIp.ok) return rateLimitResponse(c, rlIp);
+  const p = await parseBody(c, z.object({
+    email: z.string().trim().toLowerCase().max(254),
+    password: z.string().min(1).max(200),
+  }));
+  if (!p.ok) return p.res;
+  const { email, password } = p.data;
+
+  const rlEmail = await rateLimit("admin_login_email", email, 5, 15 * 60 * 1000);
+  if (!rlEmail.ok) return rateLimitResponse(c, rlEmail);
+
+  // Mauvaise configuration serveur → refuser explicitement plutôt que d'ouvrir.
+  if (ADMIN_EMAILS.length === 0 || !ADMIN_PASSWORD) {
+    log({ event: "admin_login.misconfigured", level: "error" });
+    return c.json({ error: "Admin non configuré sur le serveur." }, 503);
+  }
+
+  const emailOk = ADMIN_EMAILS.includes(email);
+  const passOk = timingSafeEqual(password, ADMIN_PASSWORD);
+  // On évalue toujours les deux pour ne pas révéler lequel a échoué.
+  if (!emailOk || !passOk) {
+    log({ event: "admin_login.denied", level: "warn", email, ip });
+    return c.json({ error: "Identifiants administrateur invalides." }, 401);
+  }
+
+  const token = await mintAdminToken(email);
+  log({ event: "admin_login.ok", email, ip });
+  return c.json({ token, email, expiresAt: Date.now() + ADMIN_TOKEN_TTL_MS });
+});
+
+// Vérifie qu'un jeton admin est toujours valide (revalidation au montage UI).
+app.get(`${PREFIX}/admin/auth/me`, async (c) => {
+  const admin = await verifyAdminToken(c.req.header("X-Admin-Token"));
+  if (!admin) return c.json({ error: "invalid" }, 401);
+  return c.json({ email: admin.email, role: "admin" });
+});
 
 // ============== AUTH ROUTES ==============
 
