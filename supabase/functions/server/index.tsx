@@ -4,7 +4,11 @@ import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import webpush from "npm:web-push@3.6.7";
 import { z } from "npm:zod@3.23.8";
-import * as kv from "./kv_store.tsx";
+// Data access is now backed by dedicated relational tables (migrations
+// 0002/0003/0004) instead of the single kv_store table. db.tsx exposes the
+// exact same interface (get/set/del/mget/mset/mdel/getByPrefix) so the routes
+// below are unchanged; each key prefix is transparently routed to its table.
+import * as kv from "./db.tsx";
 
 // ============== INPUT VALIDATION ==============
 // Centralized JSON body parsing + Zod validation. Returns either a Hono

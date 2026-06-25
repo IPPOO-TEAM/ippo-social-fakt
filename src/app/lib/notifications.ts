@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Newspaper, Mic, Calendar, AlertTriangle, Sparkles, type LucideIcon } from 'lucide-react';
 import { safeStorage, STORAGE_KEYS } from './storage-safe';
 import { fetchInbox, markNotifsRead, type InboxNotif } from './api';
+import { useRealtime } from './realtime';
 
 export interface Notif {
   id: string;
@@ -73,30 +74,32 @@ export function useNotifications() {
     };
   }, [serverBacked]);
 
+  const sync = useCallback(async () => {
+    try {
+      const r = await fetchInbox();
+      const mapped = r.items.map(fromInbox);
+      setItems(mapped);
+      setServerBacked(true);
+      write(mapped);
+    } catch {
+      // Anonymous user or network down — keep the local cache.
+    }
+  }, []);
+
   useEffect(() => {
-    let cancelled = false;
-    const sync = async () => {
-      try {
-        const r = await fetchInbox();
-        if (cancelled) return;
-        const mapped = r.items.map(fromInbox);
-        setItems(mapped);
-        setServerBacked(true);
-        write(mapped);
-      } catch {
-        // Anonymous user or network down — keep the local cache.
-      }
-    };
     sync();
     const onFocus = () => { if (document.visibilityState === 'visible') sync(); };
     document.addEventListener('visibilitychange', onFocus);
     window.addEventListener('focus', sync);
     return () => {
-      cancelled = true;
       document.removeEventListener('visibilitychange', onFocus);
       window.removeEventListener('focus', sync);
     };
-  }, []);
+  }, [sync]);
+
+  // Temps réel : nouvelle notification serveur → la cloche se met à jour.
+  // Le RLS limite déjà la diffusion aux notifications de l'utilisateur courant.
+  useRealtime('notifications', undefined, sync, true);
 
   const markRead = (id: string) => {
     const next = items.map((n) => n.id === id ? { ...n, read: true } : n);

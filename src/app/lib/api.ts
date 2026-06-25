@@ -1,15 +1,57 @@
 import { createClient, type Session } from "@supabase/supabase-js";
-import { projectId, publicAnonKey } from "../../../utils/supabase/info";
 import { cacheGet, cacheSet } from "./offline-cache";
 import { drain, enqueue, type QueueEntry } from "./offline-queue";
 
-export const SERVER_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-506b7b3b`;
+// Supabase public credentials.
+//
+// Historically these came from `utils/supabase/info.tsx`, a platform-managed
+// file that is regenerated when you connect Supabase from Figma Make. That
+// file is not always present (fresh checkout, CI clone), and a hard static
+// import of a missing module breaks the whole build/dev server. To stay
+// resilient we resolve from Vite env vars first and fall back to the optional
+// info module only when it exists.
+//
+// Both values are PUBLIC-safe: `projectId` is just the project subdomain and
+// `publicAnonKey` is the publishable anon key (data is protected by RLS). The
+// secret `service_role` key must NEVER appear here — it lives only in
+// `supabase secrets` on the Edge Function.
+const env = (import.meta as any).env ?? {};
+const infoModules = import.meta.glob("../../../utils/supabase/info.tsx", { eager: true }) as Record<
+  string,
+  { projectId?: string; publicAnonKey?: string; supabaseUrl?: string }
+>;
+const info = Object.values(infoModules)[0] ?? {};
+
+// IPPOO Social-Fact runs on a SELF-HOSTED Supabase (Kong gateway), not a hosted
+// *.supabase.co project. So we resolve a full base URL rather than a projectId.
+// Order of precedence: Vite env var → info.tsx (if connected via Figma) →
+// the known public production URL. All three values below are PUBLIC-safe.
+const DEFAULT_SUPABASE_URL = "https://socialfaktdatabase.ippoo-aptdc.com";
+const DEFAULT_ANON_KEY =
+  "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc4MjM5MDYwMCwiZXhwIjo0OTM4MDY0MjAwLCJyb2xlIjoiYW5vbiJ9.xV8OO9ZdxUauWS8l_s8aVSToCEs1htYapmQCVS7P7Qo";
+
+export const SUPABASE_URL: string =
+  env.VITE_SUPABASE_URL ||
+  info.supabaseUrl ||
+  (env.VITE_SUPABASE_PROJECT_ID ? `https://${env.VITE_SUPABASE_PROJECT_ID}.supabase.co` : "") ||
+  (info.projectId ? `https://${info.projectId}.supabase.co` : "") ||
+  DEFAULT_SUPABASE_URL;
+
+// Kept exported for backwards-compat (some callers reference projectId); derive
+// it from the URL host when possible, else empty.
+export const projectId: string =
+  env.VITE_SUPABASE_PROJECT_ID || info.projectId || "";
+
+export const publicAnonKey: string =
+  env.VITE_SUPABASE_ANON_KEY || info.publicAnonKey || DEFAULT_ANON_KEY;
+
+export const SERVER_BASE = `${SUPABASE_URL}/functions/v1/make-server-506b7b3b`;
 
 // Singleton Supabase client (used for auth + session)
 let _client: ReturnType<typeof createClient> | null = null;
 export function supabase() {
   if (!_client) {
-    _client = createClient(`https://${projectId}.supabase.co`, publicAnonKey, {
+    _client = createClient(SUPABASE_URL, publicAnonKey, {
       auth: { persistSession: true, autoRefreshToken: true },
     });
   }

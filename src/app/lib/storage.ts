@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { safeStorage, STORAGE_KEYS } from './storage-safe';
+import { useRealtime } from './realtime';
 import { useUser } from './user';
 import { emitToast } from '../components/Toast';
 import {
@@ -152,6 +153,15 @@ export function useComments(targetId: string) {
   const [liked, setLiked] = useState<Set<string>>(() => readLiked());
   const { user } = useUser();
 
+  const reload = useCallback(async () => {
+    try {
+      const { items: remote } = await fetchComments(targetId);
+      setItems(remote.map((c: ServerComment) => ({ ...c })));
+    } catch {
+      setItems([]);
+    }
+  }, [targetId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -165,6 +175,10 @@ export function useComments(targetId: string) {
     })();
     return () => { cancelled = true; };
   }, [targetId]);
+
+  // Temps réel : tout nouveau commentaire/like d'un autre client recharge la
+  // liste via l'Edge Function (respecte la modération côté serveur).
+  useRealtime('comments', `target_id=eq.${targetId}`, reload, !!targetId);
 
   const list = items
     .map((c) => ({ ...c, liked: liked.has(c.id) }))
@@ -253,6 +267,16 @@ export function useEmojiReactions(targetId: string) {
   const [serverCounts, setServerCounts] = useState<Partial<Record<ReactionType, number>> | null>(null);
   const [serverMine, setServerMine] = useState<ReactionType | null | undefined>(undefined);
 
+  const reloadReactions = useCallback(async () => {
+    try {
+      const r = await fetchReactions(targetId);
+      setServerCounts(r.counts);
+      setServerMine(r.mine);
+    } catch {
+      // Stay on local-only fallback.
+    }
+  }, [targetId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -267,6 +291,10 @@ export function useEmojiReactions(targetId: string) {
     })();
     return () => { cancelled = true; };
   }, [targetId, user.authed]);
+
+  // Temps réel : les réactions des autres utilisateurs mettent à jour les
+  // compteurs sans rechargement de page.
+  useRealtime('reactions', `target_id=eq.${targetId}`, reloadReactions, !!targetId);
 
   const localMine = map[targetId];
   const mine: ReactionType | undefined = (serverMine ?? localMine) ?? undefined;

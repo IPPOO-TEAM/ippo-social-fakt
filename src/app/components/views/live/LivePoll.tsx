@@ -1,7 +1,8 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { fetchPoll, votePoll } from '../../../lib/api';
 import { useUser } from '../../../lib/user';
+import { useRealtime } from '../../../lib/realtime';
 import { emitToast } from '../../Toast';
 
 export interface PollOption { id: string; label: string; }
@@ -18,6 +19,16 @@ export const LivePoll = memo(function LivePoll({ pollId, question, options }: Pr
   const [voted, setVoted] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const reload = useCallback(async () => {
+    try {
+      const r = await fetchPoll(pollId);
+      setCounts(r.counts ?? {});
+      setVoted(r.mine ?? null);
+    } catch {
+      setCounts({}); setVoted(null);
+    }
+  }, [pollId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -32,6 +43,9 @@ export const LivePoll = memo(function LivePoll({ pollId, question, options }: Pr
     })();
     return () => { cancelled = true; };
   }, [pollId]);
+
+  // Temps réel : les votes des autres participants animent les barres en direct.
+  useRealtime('poll_votes', `poll_id=eq.${pollId}`, reload, !!pollId);
 
   const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
 
