@@ -16,6 +16,7 @@ import { MoreMenu } from './components/MoreMenu';
 import { PullToRefresh } from './components/PullToRefresh';
 import { ToastProvider } from './components/Toast';
 import { OfflineBanner } from './components/OfflineBanner';
+import { InstallPrompt } from './components/InstallPrompt';
 import { Onboarding } from './components/Onboarding';
 import { AuthSheet } from './components/AuthSheet';
 import { RouteErrorBoundary, RouteFallback } from './components/ErrorBoundary';
@@ -127,7 +128,7 @@ import type { PlanId } from './lib/subscription';
 import { useTheme } from './lib/theme';
 import { articles, videos, shorts, opportunities, type Article, type Video, type Opportunity } from './data/mock';
 import { useLiveItem } from './lib/live-content';
-import { useDocumentMeta } from './lib/document-meta';
+import { useDocumentMeta, installSiteStructuredData } from './lib/document-meta';
 import type { Dossier } from './components/views/DossierDetail';
 import { sectionMap, SectionKey } from './data/sections';
 import { useUser } from './lib/user';
@@ -185,7 +186,7 @@ function Root() {
     if (next) audioEngine.play(); else audioEngine.pause();
   };
 
-  useEffect(() => { installPwaMeta(); void registerServiceWorker(); }, []);
+  useEffect(() => { installPwaMeta(); installSiteStructuredData(); void registerServiceWorker(); }, []);
   useEffect(() => { trackPageview(); }, [location.pathname]);
   useEffect(() => {
     setMonitoringUser(user.authed ? { id: user.email, email: user.email } : undefined);
@@ -202,6 +203,32 @@ function Root() {
     videos: t('title.videos'),
     more: undefined,
   };
+
+  // Meta SEO par vue principale. Fournie uniquement pour les routes de nav
+  // de base ; les pages de détail (article, vidéo, etc.) gèrent leur propre
+  // meta via leur composant, donc on passe `null` pour ne pas les écraser.
+  const coreMetaMap: Partial<Record<ViewKey, { title?: string; description: string; keywords?: string }>> = {
+    home: {
+      description: 'IPPOO Social-Fact : toute l’actualité du Bénin en temps réel — articles, podcasts, vidéos, radio en direct, opportunités et prix des marchés.',
+    },
+    actu: {
+      title: 'Actualités',
+      description: 'Suivez l’actualité béninoise et africaine : politique, économie, société, sport et culture, mise à jour en continu.',
+      keywords: 'actualités Bénin, info Bénin, politique Bénin, économie Bénin, news Cotonou, journal béninois',
+    },
+    podcast: {
+      title: 'Podcasts',
+      description: 'Écoutez les podcasts béninois d’IPPOO : débats, interviews, récits et émissions audio à la demande.',
+      keywords: 'podcasts Bénin, audio Bénin, émissions béninoises, interviews, balado Afrique',
+    },
+    videos: {
+      title: 'Vidéos',
+      description: 'Regardez les vidéos et reportages d’IPPOO Social-Fact sur l’actualité et la vie au Bénin.',
+      keywords: 'vidéos Bénin, reportages Bénin, télévision béninoise, streaming Bénin',
+    },
+  };
+  const isCoreRoute = location.pathname === '/' || ['actu', 'podcast', 'videos'].some((p) => location.pathname.startsWith(`/${p}`));
+  useDocumentMeta(isCoreRoute ? coreMetaMap[view] ?? null : null);
 
   const handleNavChange = (k: ViewKey) => {
     if (k === 'more') { setMoreOpen(true); return; }
@@ -237,6 +264,7 @@ function Root() {
       }}
     >
       <OfflineBanner />
+      <InstallPrompt />
       {!user.onboarded && <Onboarding />}
       <AuthSheet open={authOpen} onClose={() => setAuthOpen(false)} />
       <AppHeader

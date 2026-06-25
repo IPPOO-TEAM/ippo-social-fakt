@@ -1,12 +1,22 @@
 import { Facebook, Instagram, Twitter, Youtube, Mail, Phone, MapPin, Sparkles, ArrowUpRight } from 'lucide-react';
+import logoUrl from '../../imports/social_fakt_fav.jpg';
 
 export function Footer() {
   return (
-    <footer className="relative bg-[#0F0A1F] text-white pt-16 md:pt-20 pb-8 overflow-hidden">
+    <footer className="relative bg-[#0F0A1F] text-white pb-8 overflow-hidden">
+      {/* Bande blanche opaque pleine largeur avec le logo centré */}
+      <div className="w-full bg-white py-6 flex items-center justify-center px-5">
+        <img
+          src={logoUrl}
+          alt="IPPOO Social Fakts"
+          style={{ height: 44, width: 'auto', maxWidth: '100%', objectFit: 'contain' }}
+        />
+      </div>
+
       <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[#0066FF]/20 blur-3xl" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-[#FF3FA4]/20 blur-3xl" />
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 relative">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6 relative pt-16 md:pt-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3 mb-5">

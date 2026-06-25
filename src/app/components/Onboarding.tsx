@@ -4,16 +4,13 @@ import { ChevronRight, MapPin, Sparkles, Check, Search } from 'lucide-react';
 import { useUser } from '../lib/user';
 import { useResolvedSections } from '../lib/admin-overrides';
 import { AFRICA } from '../data/countries';
-import logoUrl from '../../imports/social_fact_logo.png';
-import logoDarkUrl from '../../imports/social_fact_logo_drak_mode.png';
-import { useTheme } from '../lib/theme';
+import logoUrl from '../../imports/social_fakt_fav.jpg';
 import { useT } from '../lib/i18n';
 
 const STEPS = 3;
 
 export function Onboarding() {
   const { user, update } = useUser();
-  const { isDark } = useTheme();
   const t = useT();
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
@@ -60,8 +57,8 @@ export function Onboarding() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div key="s0" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} className="pt-6 text-center">
-              <div className="w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <img src={isDark ? logoDarkUrl : logoUrl} alt="" className="w-full h-full object-contain"/>
+              <div className="w-full max-w-xs mx-auto mb-6 flex items-center justify-center bg-white rounded-2xl py-5 px-6">
+                <img src={logoUrl} alt="IPPOO Social Fakts" className="w-full object-contain" style={{ maxHeight: 56 }}/>
               </div>
               <h1 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.6rem', color: '#1a1a1a', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
                 {t('onb.welcome')}

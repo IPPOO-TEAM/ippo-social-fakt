@@ -1,10 +1,8 @@
 import { Bell, X, Search, User, Menu, CheckCheck } from 'lucide-react';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import logoUrl from '../../imports/social_fact_logo.png';
-import logoDarkUrl from '../../imports/social_fact_logo_drak_mode.png';
+import logoUrl from '../../imports/social_fakt_fav.jpg';
 import { useNotifications, notifIcon } from '../lib/notifications';
-import { useTheme } from '../lib/theme';
 import { useT } from '../lib/i18n';
 import { LangSwitcher } from './LangSwitcher';
 
@@ -19,12 +17,13 @@ interface Props {
 export function AppHeader({ title, onOpenSearch, onOpenProfile, onOpenMenu }: Props) {
   const [notifOpen, setNotifOpen] = useState(false);
   const { items: notifications, unread, markRead, markAllRead } = useNotifications();
-  const { isDark } = useTheme();
   const t = useT();
 
+  // Le header est toujours sur fond blanc opaque : on force les icônes en
+  // sombre pour rester lisibles, y compris en mode sombre.
   const iconBtn: React.CSSProperties = {
     width: 36, height: 36, borderRadius: 9999,
-    background: 'transparent', color: 'var(--foreground)',
+    background: 'transparent', color: '#1a1a1a',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 
@@ -37,27 +36,30 @@ export function AppHeader({ title, onOpenSearch, onOpenProfile, onOpenMenu }: Pr
         paddingTop: 'env(safe-area-inset-top)',
       }}
     >
-      <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between">
+      <div className="max-w-2xl mx-auto px-4 py-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {onOpenProfile ? (
-            <button
-              onClick={onOpenProfile}
-              className="flex-shrink-0 flex items-center justify-center"
-              style={{ width: 32, height: 32, borderRadius: 9999, background: 'var(--secondary)', color: 'var(--foreground)' }}
-              aria-label={t('common.profile')}
-            >
-              <User size={16} />
-            </button>
-          ) : (
-            <img src={isDark ? logoDarkUrl : logoUrl} alt="IPPOO" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-          )}
+          <img
+            src={logoUrl}
+            alt="IPPOO Social Fakts"
+            className="flex-shrink-0"
+            style={{ height: 30, width: 'auto', maxWidth: 168, objectFit: 'contain' }}
+          />
           {title && (
-            <span style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: '1.15rem', color: 'var(--foreground)', letterSpacing: '-0.01em' }}>
+            <span className="truncate" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#1a1a1a', letterSpacing: '-0.01em' }}>
               {title}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {onOpenProfile && (
+            <button
+              onClick={onOpenProfile}
+              style={iconBtn}
+              aria-label={t('common.profile')}
+            >
+              <User size={18} />
+            </button>
+          )}
           {onOpenMenu && (
             <button onClick={onOpenMenu} style={iconBtn} aria-label={t('header.menu')}>
               <Menu size={18} />

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { SectionKey } from '../data/sections';
 import { useResolvedSections } from '../lib/admin-overrides';
 import { useT } from '../lib/i18n';
+import logoUrl from '../../imports/social_fakt_fav.jpg';
 
 interface Props {
   open: boolean;
@@ -153,9 +154,14 @@ export function MoreMenu({ open, onClose, onPick, current }: Props) {
               })}
             </nav>
 
-            <div className="px-5 py-3 border-t border-[#F0F0F0] flex-shrink-0">
+            <div className="px-5 py-4 border-t border-[#F0F0F0] flex-shrink-0 flex flex-col items-center gap-2" style={{ background: '#FFFFFF' }}>
+              <img
+                src={logoUrl}
+                alt="IPPOO Social Fakts"
+                style={{ height: 26, width: 'auto', maxWidth: '70%', objectFit: 'contain' }}
+              />
               <div className="text-[#717182]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem' }}>
-                IPPOO Social-Fact · v1.0.0
+                v1.0.0
               </div>
             </div>
           </motion.aside>

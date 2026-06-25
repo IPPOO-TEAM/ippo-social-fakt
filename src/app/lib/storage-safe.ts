@@ -15,6 +15,7 @@ export const STORAGE_KEYS = {
   notifications: 'ippoo:notifications',
   dataSaver: 'ippoo:dataSaver',
   recentSearches: 'ippoo:recentSearches',
+  installPrompt: 'ippoo:install-prompt',
   pwdChangedAt: 'ippoo:pwd_changed_at',
   wellbeing: 'ippoo:wellbeing',
   wbMoodlog: 'ippoo:wellbeing:moodlog',
