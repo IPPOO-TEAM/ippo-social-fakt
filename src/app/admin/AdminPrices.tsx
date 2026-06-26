@@ -61,13 +61,6 @@ export function AdminPrices() {
     if (!editing) return;
     const er: Partial<Record<keyof PriceItem, string>> = {};
     if (!editing.product.trim()) er.product = 'Produit requis.';
-    if (!editing.unit.trim()) er.unit = 'Unité requise.';
-    if (editing.price < 0) er.price = 'Prix négatif interdit.';
-    if (editing.prev < 0) er.prev = 'Valeur négative interdite.';
-    if (editing.refMin < 0) er.refMin = 'Valeur négative interdite.';
-    if (editing.refMax < 0) er.refMax = 'Valeur négative interdite.';
-    if (editing.refMin && editing.refMax && editing.refMin > editing.refMax) er.refMax = 'Max doit être ≥ Min.';
-    if (editing.markets.some((m) => !m.name.trim() || m.price < 0)) er.markets = 'Marchés : nom requis et prix ≥ 0.';
     setErrors(er);
     if (Object.keys(er).length > 0) { show('Champs invalides.', 'error'); return; }
     const last = editing.history[editing.history.length - 1] ?? editing.price;
@@ -141,7 +134,7 @@ export function AdminPrices() {
       >
         {editing && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Nom du produit *" hint={errors.product}><Input value={editing.product} maxLength={120} onChange={(e) => setEditing({ ...editing, product: e.target.value })} style={{ borderColor: errors.product ? '#D32F2F' : undefined }}/></Field></div>
+            <div className="col-span-2"><Field label="Nom du produit *" hint={errors.product}><Input value={editing.product} onChange={(e) => setEditing({ ...editing, product: e.target.value })} style={{ borderColor: errors.product ? '#D32F2F' : undefined }}/></Field></div>
             <Field label="Catégorie"><Select value={editing.category} onChange={(v) => setEditing({ ...editing, category: v as PriceCategory })} options={CATEGORIES} /></Field>
             <Field label="Unité *" hint={errors.unit}><Input value={editing.unit} onChange={(e) => setEditing({ ...editing, unit: e.target.value })} style={{ borderColor: errors.unit ? '#D32F2F' : undefined }}/></Field>
             <Field label="Prix actuel (FCFA)" hint={errors.price}><Input type="number" min={0} value={String(editing.price)} onChange={(e) => setEditing({ ...editing, price: Math.max(0, Number(e.target.value) || 0) })} style={{ borderColor: errors.price ? '#D32F2F' : undefined }}/></Field>

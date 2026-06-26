@@ -553,6 +553,7 @@ const RESOURCES = [
   "article", "episode", "video", "short", "opportunity", "dossier",
   "price", "program", "page", "theme", "push",
   "wb_post", "wb_post_reply", "wb_music", "wb_track",
+  "ad",
 ] as const;
 type Resource = typeof RESOURCES[number];
 
@@ -562,7 +563,23 @@ function isResource(s: string): s is Resource {
 
 // Resources that must never be exposed publicly (push targeting, themes,
 // raw price config). Only admin/editor can read them.
-const ADMIN_ONLY_RESOURCES = new Set<Resource>(["push", "theme", "price"]);
+// Read access. `push` (campagnes ciblées) et `theme` (branding interne) restent
+// privés ; `price` est PUBLIC (indice des prix conso affiché à tous). Les
+// écritures de toutes les ressources passent par requireAdmin (route PUT).
+const ADMIN_ONLY_RESOURCES = new Set<Resource>(["push", "theme"]);
+
+// Ressources dont la première publication déclenche une notification globale.
+const NOTIFY_RESOURCES = new Set<Resource>([
+  "article", "episode", "video", "short", "opportunity", "dossier",
+]);
+const NOTIFY_META: Record<string, { label: string; iconKey: "news" | "podcast" | "event" | "alert" | "opportunity"; color: string; url?: (id: string) => string }> = {
+  article:     { label: "Nouvel article", iconKey: "news",        color: "#0066FF", url: (id) => `/article/${id}` },
+  episode:     { label: "Nouvel épisode", iconKey: "podcast",     color: "#9B51E0", url: (id) => `/podcast` },
+  video:       { label: "Nouvelle vidéo", iconKey: "news",        color: "#FF3FA4", url: (id) => `/videos` },
+  short:       { label: "Nouveau short",  iconKey: "news",        color: "#FF8A00", url: (id) => `/shorts/${id}` },
+  opportunity: { label: "Nouvelle opportunité", iconKey: "opportunity", color: "#00C853", url: (id) => `/services` },
+  dossier:     { label: "Nouveau dossier", iconKey: "event",      color: "#0066FF", url: (id) => `/dossier/${id}` },
+};
 
 function isPublished(item: any): boolean {
   if (!item) return false;
@@ -626,7 +643,27 @@ app.put(`${PREFIX}/content/:resource/:id`, async (c) => {
     const existing = (await kv.get(`${resource}:${id}`)) || {};
     const merged = { ...existing, ...body, id, updatedAt: new Date().toISOString(), updatedBy: r.user.id };
     if (!existing.createdAt) merged.createdAt = merged.updatedAt;
+
+    // Auto-notification : à la PREMIÈRE publication d'un contenu destiné au
+    // public, on prévient tous les utilisateurs (inbox + push). Idempotent via
+    // le drapeau `notifiedAt` → une réédition ne renotifie pas.
+    const isPublished = merged.published !== false;
+    const alreadyNotified = !!existing.notifiedAt;
+    if (NOTIFY_RESOURCES.has(resource) && isPublished && !alreadyNotified) {
+      merged.notifiedAt = merged.updatedAt;
+    }
     await kv.set(`${resource}:${id}`, merged);
+
+    if (NOTIFY_RESOURCES.has(resource) && isPublished && !alreadyNotified) {
+      const meta = NOTIFY_META[resource] ?? { label: "Nouveau contenu", iconKey: "news" as const, color: "#0066FF" };
+      broadcastNotification({
+        title: meta.label,
+        body: String(merged.title ?? "Découvrez la nouvelle publication"),
+        url: meta.url ? meta.url(id) : "/",
+        iconKey: meta.iconKey,
+        color: meta.color,
+      }).catch((e) => console.log(`auto-notify ${resource}:${id} failed: ${e}`));
+    }
     return c.json({ item: merged });
   } catch (e) {
     console.log(`Save ${resource}:${id} error: ${e}`);
@@ -1172,17 +1209,71 @@ app.post(`${PREFIX}/notifications/unsubscribe`, async (c) => {
   }
 });
 
+// Reusable fan-out helper. Writes the notification to every targeted user's
+// inbox (Realtime table → the bell + floating toast update instantly, no
+// external service needed) and ALSO sends a Web Push best-effort when VAPID is
+// configured. Push being unavailable never blocks the in-app delivery.
+interface BroadcastInput {
+  title: string; body: string; url?: string;
+  iconKey?: "news" | "podcast" | "event" | "alert" | "opportunity";
+  color?: string; userId?: string;
+}
+async function broadcastNotification(input: BroadcastInput): Promise<{ inbox: number; sent: number; failed: number; pruned: number }> {
+  const notifId = `n-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
+  const inboxEntry = {
+    id: notifId, title: input.title, body: input.body, url: input.url ?? "/",
+    iconKey: input.iconKey ?? "news", color: input.color ?? "#0066FF",
+    sentAt: Date.now(), read: false,
+  };
+
+  // 1) Inbox fan-out (always — works even without push permission/VAPID).
+  let inbox = 0;
+  if (input.userId) {
+    await kv.set(`notif_inbox:${input.userId}:${notifId}`, { ...inboxEntry, userId: input.userId });
+    inbox = 1;
+  } else {
+    const profiles = await kv.getByPrefix("user_profile:") as Array<{ id?: string }>;
+    const ids = profiles.map((p) => p?.id).filter((id): id is string => typeof id === "string");
+    if (ids.length) {
+      const keys = ids.map((id) => `notif_inbox:${id}:${notifId}`);
+      const values = ids.map((id) => ({ ...inboxEntry, userId: id }));
+      await kv.mset(keys, values);
+      inbox = ids.length;
+    }
+  }
+
+  // 2) Web Push best-effort (skipped silently if VAPID not configured).
+  let sent = 0, failed = 0; const stale: string[] = [];
+  if (VAPID_PUBLIC && VAPID_PRIVATE) {
+    const prefix = input.userId ? `push_sub:${input.userId}:` : "push_sub:";
+    const subs = await kv.getByPrefix(prefix);
+    const payload = JSON.stringify({ title: input.title, body: input.body, url: input.url ?? "/" });
+    await Promise.all(subs.map(async (s: any) => {
+      try { await webpush.sendNotification(s.subscription, payload); sent++; }
+      catch (err: any) {
+        if (err?.statusCode === 404 || err?.statusCode === 410) {
+          const ep = s.subscription?.endpoint;
+          if (ep) {
+            const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ep))
+              .then((b) => Array.from(new Uint8Array(b)).slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join(""));
+            stale.push(`push_sub:${s.userId}:${h}`);
+          }
+        } else { console.log(`push send error: ${err?.message ?? err}`); }
+        failed++;
+      }
+    }));
+    if (stale.length) { try { await kv.mdel(stale); } catch { /* ignore */ } }
+  }
+  return { inbox, sent, failed, pruned: stale.length };
+}
+
 // Admin — broadcast or target a user.
 // body: { title, body, url?, iconKey?, color?, userId? }
 app.post(`${PREFIX}/notifications/send`, async (c) => {
   const r = await requireAdmin(c.req.raw);
   if (!r.ok) return c.json({ error: r.msg }, r.status);
-  if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
-    return c.json({ error: "push not configured (set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY)" }, 503);
-  }
-  // Broadcasts go to every subscriber and fan out to inbox writes. Cap to
-  // protect quota and surface accidental admin-panel double-clicks.
-  const sendRl = await rateLimit("push_send", r.user.id, 20, 60 * 60 * 1000);
+  // No VAPID gate: in-app inbox delivery works without external push.
+  const sendRl = await rateLimit("push_send", r.user.id, 60, 60 * 60 * 1000);
   if (!sendRl.ok) return rateLimitResponse(c, sendRl);
   const pb = await parseBody(c, z.object({
     title: z.string().trim().min(1).max(120),
@@ -1194,57 +1285,8 @@ app.post(`${PREFIX}/notifications/send`, async (c) => {
   }));
   if (!pb.ok) return pb.res;
   try {
-    const { title, body, url, iconKey, color, userId } = pb.data;
-
-    // Persist to per-user inbox so the bell badge syncs across devices,
-    // even for users that haven't granted push permission. We collect
-    // distinct userIds from registered push subs; for true broadcasts
-    // (no specific user) we also write to every user profile we know.
-    const notifId = `n-${Date.now()}-${crypto.randomUUID().slice(0, 6)}`;
-    const inboxEntry = {
-      id: notifId, title, body, url: url ?? "/",
-      iconKey: iconKey ?? "news", color: color ?? "#0066FF",
-      sentAt: Date.now(), read: false,
-    };
-    if (userId) {
-      await kv.set(`notif_inbox:${userId}:${notifId}`, inboxEntry);
-    } else {
-      const profiles = await kv.getByPrefix("user_profile:") as Array<{ id?: string }>;
-      const keys = profiles
-        .map((p) => p?.id)
-        .filter((id): id is string => typeof id === "string")
-        .map((id) => `notif_inbox:${id}:${notifId}`);
-      if (keys.length) {
-        const values = keys.map(() => inboxEntry);
-        await kv.mset(keys, values);
-      }
-    }
-
-    const prefix = userId ? `push_sub:${userId}:` : "push_sub:";
-    const subs = await kv.getByPrefix(prefix);
-    const payload = JSON.stringify({ title, body, url: url ?? "/" });
-    let sent = 0, failed = 0;
-    const stale: string[] = [];
-    await Promise.all(subs.map(async (s: any) => {
-      try {
-        await webpush.sendNotification(s.subscription, payload);
-        sent++;
-      } catch (err: any) {
-        // 404/410: subscription gone, prune it.
-        if (err?.statusCode === 404 || err?.statusCode === 410) {
-          stale.push(`push_sub:${s.userId}:${s.subscription?.endpoint
-            ? (await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s.subscription.endpoint))
-                .then((b) => Array.from(new Uint8Array(b)).slice(0, 12)
-                  .map((x) => x.toString(16).padStart(2, "0")).join("")))
-            : ""}`);
-        } else {
-          console.log(`push send error: ${err?.message ?? err}`);
-        }
-        failed++;
-      }
-    }));
-    if (stale.length) { try { await kv.mdel(stale); } catch { /* ignore */ } }
-    return c.json({ ok: true, sent, failed, pruned: stale.length });
+    const res = await broadcastNotification(pb.data);
+    return c.json({ ok: true, ...res });
   } catch (e) {
     console.log(`notifications/send error: ${e}`);
     return c.json({ error: String(e) }, 500);

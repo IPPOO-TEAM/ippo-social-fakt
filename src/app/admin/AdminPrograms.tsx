@@ -23,8 +23,6 @@ const empty = (): Program => ({
   cover: 'https://images.unsplash.com/photo-1485579149621-3123dd979885?w=600&q=80',
 });
 
-const TIME_RX = /^([01]\d|2[0-3]):[0-5]\d$/;
-
 export function AdminPrograms() {
   const { show } = useAdminToast();
   const { items, create, update, remove, reset } = useResource<Program>('programs');
@@ -43,10 +41,6 @@ export function AdminPrograms() {
     if (!editing) return;
     const er: Partial<Record<keyof Program, string>> = {};
     if (!editing.title.trim()) er.title = 'Titre requis.';
-    if (!editing.host.trim()) er.host = 'Animateur requis.';
-    if (!TIME_RX.test(editing.time)) er.time = 'Format HH:MM.';
-    if (!TIME_RX.test(editing.end)) er.end = 'Format HH:MM.';
-    if (TIME_RX.test(editing.time) && TIME_RX.test(editing.end) && editing.time >= editing.end) er.end = 'Fin > début.';
     setErrors(er);
     if (Object.keys(er).length > 0) { show('Champs invalides.', 'error'); return; }
     const initials = editing.hostInitials.trim() || editing.host.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
@@ -140,9 +134,9 @@ export function AdminPrograms() {
           <div className="grid grid-cols-2 gap-4">
             <Field label="Début (HH:MM) *" hint={errors.time}><Input value={editing.time} onChange={(e) => setEditing({ ...editing, time: e.target.value })} style={{ borderColor: errors.time ? '#D32F2F' : undefined }}/></Field>
             <Field label="Fin (HH:MM) *" hint={errors.end}><Input value={editing.end} onChange={(e) => setEditing({ ...editing, end: e.target.value })} style={{ borderColor: errors.end ? '#D32F2F' : undefined }}/></Field>
-            <div className="col-span-2"><Field label="Titre de l'émission *" hint={errors.title}><Input value={editing.title} maxLength={100} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
+            <div className="col-span-2"><Field label="Titre de l'émission *" hint={errors.title}><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
             <Field label="Animateur·rice *" hint={errors.host}><Input value={editing.host} onChange={(e) => setEditing({ ...editing, host: e.target.value })} style={{ borderColor: errors.host ? '#D32F2F' : undefined }}/></Field>
-            <Field label="Initiales" hint="Auto si vide"><Input value={editing.hostInitials} maxLength={3} onChange={(e) => setEditing({ ...editing, hostInitials: e.target.value.toUpperCase() })} /></Field>
+            <Field label="Initiales" hint="Auto si vide"><Input value={editing.hostInitials} onChange={(e) => setEditing({ ...editing, hostInitials: e.target.value.toUpperCase() })} /></Field>
             <Field label="Catégorie"><Select value={editing.category} onChange={(v) => setEditing({ ...editing, category: v })} options={CATEGORIES.map((c) => ({ value: c, label: c }))} /></Field>
             <Field label="En direct">
               <button type="button" onClick={() => setEditing({ ...editing, live: !editing.live })} className="px-3 py-2 w-full" style={{

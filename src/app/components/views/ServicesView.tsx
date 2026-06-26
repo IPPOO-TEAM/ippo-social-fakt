@@ -1,5 +1,5 @@
 import { Sparkles, HeartPulse, CircleDollarSign, LineChart, Compass, ScrollText, ChevronRight, CalendarDays, ArrowUpRight, TrendingDown, TrendingUp, Minus, ShieldCheck, Heart } from 'lucide-react';
-import { opportunities as seedOpportunities, prices as seedPrices, formatFcfa, priceTrendPct, type Opportunity, type PriceItem } from '../../data/mock';
+import { formatFcfa, priceTrendPct, type Opportunity, type PriceItem } from '../../data/mock';
 import type { SectionKey } from '../../data/sections';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { useT } from '../../lib/i18n';
@@ -22,8 +22,8 @@ function trendIcon(t: number) {
 export function ServicesView({ onOpenSection, onOpenOpportunity, onOpenAssurances, onOpenBienEtre }: Props = {}) {
  const t = useT();
  const tc = useContentT();
- const { items: opportunities } = useLiveContent<Opportunity>('opportunity', seedOpportunities);
- const { items: prices } = useLiveContent<PriceItem>('price', seedPrices);
+ const { items: opportunities } = useLiveContent<Opportunity>('opportunity');
+ const { items: prices } = useLiveContent<PriceItem>('price');
  const services: { id: string; name: string; desc: string; icon: typeof Sparkles; color: string; section: SectionKey }[] = [
    { id: 's1', name: t('services.opportunities'), desc: t('services.opp_desc'), icon: Sparkles, color: '#0066FF', section: 'opportunities' },
    { id: 's2', name: t('services.health'), desc: t('services.health_desc'), icon: HeartPulse, color: '#00C853', section: 'sante' },

@@ -76,6 +76,7 @@ const AdminSectionsPage = lazy(() => import('./admin/AdminSections').then((m) =>
 const AdminPages = lazy(() => import('./admin/AdminPages').then((m) => ({ default: m.AdminPages })));
 const AdminThemes = lazy(() => import('./admin/AdminThemes').then((m) => ({ default: m.AdminThemes })));
 const AdminPush = lazy(() => import('./admin/AdminPush').then((m) => ({ default: m.AdminPush })));
+const AdminAds = lazy(() => import('./admin/AdminAds').then((m) => ({ default: m.AdminAds })));
 const AdminSubscriptions = lazy(() => import('./admin/AdminSubscriptions').then((m) => ({ default: m.AdminSubscriptions })));
 
 // Lazy-prefetch chunks during browser idle time after first paint, so that
@@ -131,6 +132,7 @@ import { useLiveItem } from './lib/live-content';
 import { useDocumentMeta, installSiteStructuredData } from './lib/document-meta';
 import type { Dossier } from './components/views/DossierDetail';
 import { sectionMap, SectionKey } from './data/sections';
+import { useAllSections } from './lib/taxonomy';
 import { useUser } from './lib/user';
 import { useT } from './lib/i18n';
 import { installPwaMeta, registerServiceWorker, updateHtmlLang, updateThemeColor } from './lib/pwa';
@@ -479,8 +481,11 @@ function SectionRoute() {
   const search = new URLSearchParams(useLocation().search);
   const rubric = search.get('rubric') ?? undefined;
   const sectionKey = key as SectionKey | undefined;
+  // Inclut les sections custom créées dans l'admin (au-delà de sectionMap).
+  const allSections = useAllSections();
+  const section = sectionKey ? (sectionMap[sectionKey] ?? allSections.find((s) => s.key === sectionKey)) : undefined;
 
-  if (!sectionKey || !sectionMap[sectionKey]) {
+  if (!sectionKey || !section) {
     throw new Response('Section introuvable', { status: 404 });
   }
   if (sectionKey === 'consommation') return <ConsommationRoute />;
@@ -493,7 +498,7 @@ function SectionRoute() {
     <AnimatePresence>
       <SectionView
         key={`section-${sectionKey}-${rubric ?? ''}`}
-        section={sectionMap[sectionKey]}
+        section={section}
         onBack={() => navigate(-1)}
         onOpenArticle={(a) => navigate(`/article/${a.id}`)}
         onOpenVideo={(v) => navigate(`/video/${v.id}`)}
@@ -742,6 +747,7 @@ export const router = createBrowserRouter([
       { path: 'programs', Component: AdminPrograms },
       { path: 'moderation', Component: AdminModeration },
       { path: 'push', Component: AdminPush },
+      { path: 'ads', Component: AdminAds },
       { path: 'pages', Component: AdminPages },
       { path: 'themes', Component: AdminThemes },
       { path: 'sections', Component: AdminSectionsPage },

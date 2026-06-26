@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Mic, Video as VideoIcon, Briefcase, FolderOpen, TrendingUp, Eye, Users, Music2, Heart, Database } from 'lucide-react';
-import { Link } from 'react-router';
+import { FileText, Mic, Video as VideoIcon, Briefcase, FolderOpen, TrendingUp, Eye, Users, Music2, Heart, Database, FileEdit, Zap, Megaphone, ChevronRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router';
 import { useResource } from './store';
-import type { Article, Episode, Video, Opportunity, Dossier, MusicTrack } from './store';
+import type { Article, Episode, Video, Opportunity, Dossier, MusicTrack, Short } from './store';
+import type { Ad } from './AdminAds';
 import { PageHeader } from './PageHeader';
 import { useWellbeing } from '../lib/wellbeing-store';
 import { seedContent, type Resource } from '../lib/api';
@@ -94,7 +95,55 @@ export function Dashboard() {
   const opps = useResource<Opportunity>('opportunities').items;
   const dossiers = useResource<Dossier>('dossiers').items;
   const tracks = useResource<MusicTrack>('tracks').items;
+  const shorts = useResource<Short>('shorts').items;
+  const ads = useResource<Ad>('ads').items;
   const { posts, responses } = useWellbeing();
+  const navigate = useNavigate();
+
+  type DraftRow = {
+    id: string;
+    title: string;
+    resourceLabel: string;
+    icon: typeof FileText;
+    route: string;
+    ts: number;
+  };
+  const drafts: DraftRow[] = useMemo(() => {
+    const tsOf = (x: { createdAt?: string | number; updatedAt?: string | number; id: string }): number => {
+      const v = x.updatedAt ?? x.createdAt;
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') { const n = Date.parse(v); if (!Number.isNaN(n)) return n; }
+      // Fallback: try numeric suffix in id to get a stable DESC ordering.
+      const m = String(x.id).match(/(\d+)/g);
+      return m ? Number(m[m.length - 1]) : 0;
+    };
+    const buckets: Array<{ list: Array<{ id: string; title?: string; brand?: string; published?: boolean }>; label: string; icon: typeof FileText; route: string }> = [
+      { list: articles as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Article', icon: FileText, route: '/admin/articles' },
+      { list: episodes as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Podcast', icon: Mic, route: '/admin/episodes' },
+      { list: videos as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Vidéo', icon: VideoIcon, route: '/admin/videos' },
+      { list: shorts as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Short', icon: Zap, route: '/admin/shorts' },
+      { list: opps as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Opportunité', icon: Briefcase, route: '/admin/opportunities' },
+      { list: dossiers as unknown as Array<{ id: string; title?: string; published?: boolean }>, label: 'Dossier', icon: FolderOpen, route: '/admin/dossiers' },
+      { list: ads as unknown as Array<{ id: string; title?: string; brand?: string; published?: boolean }>, label: 'Publicité', icon: Megaphone, route: '/admin/ads' },
+    ];
+    const out: DraftRow[] = [];
+    for (const b of buckets) {
+      for (const it of b.list) {
+        if (it.published) continue;
+        out.push({
+          id: `${b.label}:${it.id}`,
+          title: it.title || it.brand || '(sans titre)',
+          resourceLabel: b.label,
+          icon: b.icon,
+          route: b.route,
+          ts: tsOf(it as { id: string }),
+        });
+      }
+    }
+    out.sort((a, b) => b.ts - a.ts);
+    return out;
+  }, [articles, episodes, videos, shorts, opps, dossiers, ads]);
+  const draftsVisible = drafts.slice(0, 10);
 
   const [usersCount, setUsersCount] = useState(0);
   useEffect(() => {
@@ -180,6 +229,60 @@ export function Dashboard() {
           <StatCard icon={VideoIcon} label="Vidéos" value={videos.length} color="#FF3FA4" to="/admin/videos" />
           <StatCard icon={Briefcase} label="Opportunités" value={opps.length} color="#00C853" to="/admin/opportunities" />
           <StatCard icon={FolderOpen} label="Dossiers" value={dossiers.length} color="#FF8A00" to="/admin/dossiers" />
+        </div>
+
+        <div className="bg-white border border-[#EAEAEE]" style={{ borderRadius: 12 }}>
+          <div className="px-5 py-4 border-b border-[#EAEAEE] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 flex items-center justify-center" style={{ background: '#FF8A001A', borderRadius: 8 }}>
+                <FileEdit size={15} style={{ color: '#FF8A00' }} strokeWidth={2.4} />
+              </div>
+              <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '1rem', color: '#1a1a1a' }}>
+                Brouillons
+              </div>
+              <span className="px-2 py-0.5" style={{ background: '#FF8A001A', color: '#FF8A00', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700 }}>
+                {drafts.length}
+              </span>
+            </div>
+            {drafts.length > 10 && (
+              <Link to="/admin/articles" className="flex items-center gap-1 text-[#0066FF]" style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Voir tous les brouillons <ChevronRight size={13} />
+              </Link>
+            )}
+          </div>
+          {drafts.length === 0 ? (
+            <div className="px-5 py-4 text-[#717182]" style={{ fontSize: '0.82rem' }}>
+              Aucun brouillon en attente.
+            </div>
+          ) : (
+            <div className="divide-y divide-[#EAEAEE]">
+              {draftsVisible.map((d) => {
+                const I = d.icon;
+                return (
+                  <div key={d.id} className="px-5 py-3 flex items-center gap-3">
+                    <div className="w-9 h-9 flex items-center justify-center flex-shrink-0" style={{ background: '#F4F4F6', borderRadius: 8 }}>
+                      <I size={15} className="text-[#1a1a1a]" strokeWidth={2.3} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="line-clamp-1" style={{ fontWeight: 600, fontSize: '0.88rem', color: '#1a1a1a' }}>{d.title}</div>
+                      <div style={{ fontSize: '0.74rem', color: '#717182' }}>{d.resourceLabel}</div>
+                    </div>
+                    <span className="px-2 py-0.5 flex-shrink-0" style={{ background: '#FFE9D4', color: '#FF8A00', borderRadius: 999, fontSize: '0.7rem', fontWeight: 700 }}>
+                      Brouillon
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(d.route)}
+                      className="px-3 py-1.5 bg-[#0066FF] text-white flex-shrink-0 flex items-center gap-1"
+                      style={{ borderRadius: 8, fontSize: '0.78rem', fontWeight: 600 }}
+                    >
+                      Ouvrir <ChevronRight size={13} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -206,7 +206,10 @@ export function Modal({ open, onClose, title, children, footer }: {
 
 // Downscale large images client-side to a JPEG/PNG Blob before upload so we
 // don't ship 12 Mo originals to Storage. SVG/GIF/WebP pass through untouched.
-async function downscaleImage(file: File, maxSize = 1600, quality = 0.85): Promise<Blob> {
+// Downscale + recompresse en WebP (gains de poids importants, transparence
+// préservée). SVG/GIF (animés) restent intacts. Renvoie le fichier d'origine
+// si la conversion n'apporte rien ou échoue.
+async function downscaleImage(file: File, maxSize = 1600, quality = 0.82): Promise<Blob> {
   if (!file.type.startsWith('image/') || file.type === 'image/svg+xml' || file.type === 'image/gif') return file;
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -218,7 +221,6 @@ async function downscaleImage(file: File, maxSize = 1600, quality = 0.85): Promi
     const img = new Image();
     img.onload = () => {
       const ratio = Math.min(1, maxSize / Math.max(img.width, img.height));
-      if (ratio === 1) return resolve(file);
       const w = Math.round(img.width * ratio);
       const h = Math.round(img.height * ratio);
       const canvas = document.createElement('canvas');
@@ -226,12 +228,25 @@ async function downscaleImage(file: File, maxSize = 1600, quality = 0.85): Promi
       const ctx = canvas.getContext('2d');
       if (!ctx) return resolve(file);
       ctx.drawImage(img, 0, 0, w, h);
-      const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-      canvas.toBlob((b) => resolve(b ?? file), mime, quality);
+      // WebP si supporté, sinon JPEG (PNG conservé pour la transparence pleine).
+      const webpOk = canvas.toDataURL('image/webp').startsWith('data:image/webp');
+      const mime = webpOk ? 'image/webp' : (file.type === 'image/png' ? 'image/png' : 'image/jpeg');
+      canvas.toBlob((b) => {
+        // Garde l'original si la "compression" l'a alourdi (petites images déjà optimisées).
+        if (b && b.size < file.size) resolve(b);
+        else if (ratio < 1 && b) resolve(b);
+        else resolve(file);
+      }, mime, quality);
     };
     img.onerror = () => resolve(file);
     img.src = dataUrl;
   });
+}
+
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} o`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} Ko`;
+  return `${(n / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
 export function ImageUpload({ value, onChange, aspect = '16/9' }: {
@@ -240,6 +255,7 @@ export function ImageUpload({ value, onChange, aspect = '16/9' }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const handleFiles = async (files: FileList | null) => {
@@ -247,12 +263,15 @@ export function ImageUpload({ value, onChange, aspect = '16/9' }: {
     const file = files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { setError('Format non supporté.'); return; }
-    if (file.size > 12 * 1024 * 1024) { setError('Image trop volumineuse (max 12 Mo).'); return; }
     setBusy(true);
+    setProgress(0);
     try {
       const blob = await downscaleImage(file);
-      const namedFile = blob instanceof File ? blob : new File([blob], file.name, { type: blob.type || file.type });
-      const { url } = await uploadPublicMedia(namedFile);
+      // Nomme en .webp si la recompression a changé le type.
+      const ext = (blob.type.split('/')[1] || 'webp').replace(/[^a-z0-9]/g, '');
+      const baseName = (file.name.replace(/\.[^.]+$/, '') || 'image');
+      const namedFile = blob instanceof File ? blob : new File([blob], `${baseName}.${ext}`, { type: blob.type || file.type });
+      const { url } = await uploadPublicMedia(namedFile, setProgress);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload impossible.');
@@ -296,14 +315,19 @@ export function ImageUpload({ value, onChange, aspect = '16/9' }: {
             className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#717182] hover:text-[#0066FF] transition-colors"
           >
             {busy ? (
-              <div style={{ fontSize: '0.82rem', fontWeight: 500 }}>Chargement…</div>
+              <div className="w-2/3 flex flex-col items-center gap-2">
+                <div className="w-full h-1.5 bg-[#EAEAEE] overflow-hidden" style={{ borderRadius: 999 }}>
+                  <div className="h-full bg-[#0066FF] transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+                </div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{progress < 1 ? `Envoi… ${Math.round(progress * 100)}%` : 'Finalisation…'}</div>
+              </div>
             ) : (
               <>
                 <div className="w-11 h-11 bg-white border border-[#EAEAEE] flex items-center justify-center" style={{ borderRadius: 10 }}>
                   <ImageIcon size={18} />
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Cliquez ou glissez une image</div>
-                <div style={{ fontSize: '0.7rem' }}>PNG, JPG, WebP · aucune limite</div>
+                <div style={{ fontSize: '0.7rem' }}>PNG, JPG, WebP · compressé automatiquement</div>
               </>
             )}
           </button>
@@ -348,6 +372,7 @@ export function MediaUpload({ kind, value, onChange }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -360,11 +385,12 @@ export function MediaUpload({ kind, value, onChange }: {
     const file = files?.[0];
     if (!file) return;
     if (!file.type.startsWith(`${kind}/`)) { setError('Format non supporté.'); return; }
-    const maxMb = kind === 'audio' ? 30 : 80;
-    if (file.size > maxMb * 1024 * 1024) { setError(`Fichier trop volumineux (max ${maxMb} Mo).`); return; }
+    // Limite alignée sur le serveur (80 Mo). Au-delà, message clair.
+    if (file.size > 80 * 1024 * 1024) { setError(`Fichier trop volumineux (${fmtBytes(file.size)} · max 80 Mo).`); return; }
     setBusy(true);
+    setProgress(0);
     try {
-      const { url } = await uploadPublicMedia(file);
+      const { url } = await uploadPublicMedia(file, setProgress);
       setFileName(file.name);
       onChange(url);
     } catch (err) {
@@ -431,14 +457,19 @@ export function MediaUpload({ kind, value, onChange }: {
             className="w-full flex flex-col items-center justify-center gap-2 text-[#717182] hover:text-[#0066FF] transition-colors py-3"
           >
             {busy ? (
-              <div style={{ fontSize: '0.82rem', fontWeight: 500 }}>Chargement…</div>
+              <div className="w-2/3 flex flex-col items-center gap-2">
+                <div className="w-full h-1.5 bg-[#EAEAEE] overflow-hidden" style={{ borderRadius: 999 }}>
+                  <div className="h-full bg-[#0066FF] transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+                </div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{progress < 1 ? `Envoi… ${Math.round(progress * 100)}%` : 'Finalisation…'}</div>
+              </div>
             ) : (
               <>
                 <div className="w-11 h-11 bg-white border border-[#EAEAEE] flex items-center justify-center" style={{ borderRadius: 10 }}>
                   <Icon size={18} />
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>Cliquez ou glissez un fichier {label}</div>
-                <div style={{ fontSize: '0.7rem' }}>{kind === 'audio' ? 'MP3, WAV, OGG' : 'MP4, WebM'} · aucune limite</div>
+                <div style={{ fontSize: '0.7rem' }}>{kind === 'audio' ? 'MP3, WAV, OGG' : 'MP4, WebM'} · jusqu'à 80 Mo</div>
               </>
             )}
           </button>
@@ -473,6 +504,206 @@ export function MediaUpload({ kind, value, onChange }: {
       />
 
       {error && <div style={{ fontSize: '0.72rem', color: '#D32F2F' }}>{error}</div>}
+    </div>
+  );
+}
+
+interface GalleryUploadJob {
+  id: string;
+  name: string;
+  progress: number;
+  error: string | null;
+}
+
+export function ImageGalleryUpload({ value, onChange, max = 12 }: {
+  value: string[]; onChange: (urls: string[]) => void; max?: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState(false);
+  const [jobs, setJobs] = useState<GalleryUploadJob[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  // Hold the latest `value` in a ref so the parallel upload pump always sees
+  // the freshest list when it appends a new URL (avoids races between
+  // concurrent uploads finishing back-to-back).
+  const valueRef = useRef<string[]>(value);
+  useEffect(() => { valueRef.current = value; }, [value]);
+
+  const updateJob = (id: string, patch: Partial<GalleryUploadJob>) => {
+    setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+  };
+  const removeJob = (id: string) => {
+    setJobs((prev) => prev.filter((j) => j.id !== id));
+  };
+
+  const processOne = async (file: File, jobId: string) => {
+    try {
+      const blob = await downscaleImage(file);
+      const ext = (blob.type.split('/')[1] || 'webp').replace(/[^a-z0-9]/g, '');
+      const baseName = (file.name.replace(/\.[^.]+$/, '') || 'image');
+      const namedFile = blob instanceof File ? blob : new File([blob], `${baseName}.${ext}`, { type: blob.type || file.type });
+      const { url } = await uploadPublicMedia(namedFile, (p) => updateJob(jobId, { progress: p }));
+      onChange([...valueRef.current, url]);
+      // Brief moment at 100% before the row disappears.
+      setTimeout(() => removeJob(jobId), 250);
+    } catch (err) {
+      updateJob(jobId, { error: err instanceof Error ? err.message : 'Upload impossible.' });
+    }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    setNotice(null);
+    if (!files || files.length === 0) return;
+    const imgs = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    const rejected = files.length - imgs.length;
+    if (rejected > 0) setNotice(`${rejected} fichier(s) ignoré(s) — images uniquement.`);
+
+    const remaining = Math.max(0, max - valueRef.current.length);
+    let selected = imgs;
+    if (imgs.length > remaining) {
+      selected = imgs.slice(0, remaining);
+      setNotice(`Limite atteinte (${max}). ${imgs.length - remaining} fichier(s) ignoré(s).`);
+    }
+    if (selected.length === 0) return;
+
+    const newJobs: GalleryUploadJob[] = selected.map((f) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${f.name}`,
+      name: f.name,
+      progress: 0,
+      error: null,
+    }));
+    setJobs((prev) => [...prev, ...newJobs]);
+
+    // Run up to 3 in parallel using a simple promise pool.
+    const queue = selected.map((f, i) => ({ file: f, jobId: newJobs[i].id }));
+    const workers: Promise<void>[] = [];
+    const next = async () => {
+      const item = queue.shift();
+      if (!item) return;
+      await processOne(item.file, item.jobId);
+      await next();
+    };
+    const parallelism = Math.min(3, queue.length);
+    for (let i = 0; i < parallelism; i++) workers.push(next());
+    await Promise.all(workers);
+  };
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDrag(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const removeAt = (idx: number) => {
+    const copy = value.slice();
+    copy.splice(idx, 1);
+    onChange(copy);
+  };
+
+  const full = value.length >= max;
+
+  return (
+    <div className="space-y-2">
+      <div
+        onDragOver={(e) => { e.preventDefault(); if (!full) setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={onDrop}
+        className="relative bg-[#F7F7FA] border-2 border-dashed transition-colors"
+        style={{ borderRadius: 10, borderColor: drag ? '#0066FF' : '#EAEAEE', padding: 14 }}
+      >
+        {value.length > 0 && (
+          <div className="grid gap-2 mb-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))' }}>
+            {value.map((url, i) => (
+              <div key={`${url}-${i}`} className="relative bg-white border border-[#EAEAEE] overflow-hidden" style={{ borderRadius: 10, aspectRatio: '1 / 1' }}>
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeAt(i)}
+                  className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 text-white flex items-center justify-center"
+                  style={{ borderRadius: 999 }}
+                  title="Retirer"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={full}
+          className="w-full flex flex-col items-center justify-center gap-2 text-[#717182] hover:text-[#0066FF] transition-colors py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <div className="w-11 h-11 bg-white border border-[#EAEAEE] flex items-center justify-center" style={{ borderRadius: 10 }}>
+            <ImageIcon size={18} />
+          </div>
+          <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+            {full ? `Limite atteinte (${max})` : 'Cliquez ou glissez plusieurs images'}
+          </div>
+          <div style={{ fontSize: '0.7rem' }}>
+            {value.length}/{max} · PNG, JPG, WebP · compressé automatiquement
+          </div>
+        </button>
+      </div>
+
+      {jobs.length > 0 && (
+        <div className="space-y-1.5">
+          {jobs.map((j) => (
+            <div key={j.id} className="bg-white border border-[#EAEAEE] px-3 py-2" style={{ borderRadius: 10 }}>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="truncate" style={{ fontSize: '0.76rem', fontWeight: 600, color: '#1a1a1a' }}>{j.name}</div>
+                <div style={{ fontSize: '0.7rem', color: j.error ? '#D32F2F' : '#717182', flexShrink: 0 }}>
+                  {j.error ? 'Erreur' : `${Math.round(j.progress * 100)}%`}
+                </div>
+              </div>
+              {j.error ? (
+                <div className="flex items-center justify-between gap-2">
+                  <div style={{ fontSize: '0.72rem', color: '#D32F2F' }}>{j.error}</div>
+                  <button
+                    type="button"
+                    onClick={() => removeJob(j.id)}
+                    className="text-[#717182] hover:text-[#1a1a1a]"
+                    style={{ fontSize: '0.7rem', fontWeight: 600 }}
+                  >
+                    Fermer
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full h-1.5 bg-[#EAEAEE] overflow-hidden" style={{ borderRadius: 999 }}>
+                  <div className="h-full bg-[#0066FF] transition-all" style={{ width: `${Math.round(j.progress * 100)}%` }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={full}
+          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#EAEAEE] hover:bg-[#F7F7FA] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ borderRadius: 8, fontSize: '0.78rem', fontWeight: 600, color: '#1a1a1a' }}
+        >
+          <Upload size={13} /> Importer des images
+        </button>
+        <div style={{ fontSize: '0.72rem', color: '#717182' }}>
+          {value.length}/{max} sélectionnée(s)
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e: ChangeEvent<HTMLInputElement>) => { handleFiles(e.target.files); e.target.value = ''; }}
+      />
+
+      {notice && <div style={{ fontSize: '0.72rem', color: '#A35200' }}>{notice}</div>}
     </div>
   );
 }

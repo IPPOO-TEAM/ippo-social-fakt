@@ -24,6 +24,8 @@ interface Slot {
   cover: string;
   live?: boolean;
   audio?: string;
+  video?: string;
+  viewers?: number;
 }
 
 function usePrograms(): Slot[] {
@@ -57,21 +59,12 @@ interface LiveStream {
   startedAgo: string;
 }
 
-const liveStreams: LiveStream[] = [
-  { id: 'tv1', title: 'Édition spéciale · marchés de Cotonou', category: 'JT en direct', host: 'Rédaction IPPOO', cover: 'https://images.unsplash.com/photo-1589707197624-27802d81f462?w=1200&q=80', viewers: 8420, startedAgo: '12 min' },
-  { id: 'tv2', title: 'Plateau économique · franc CFA', category: 'Débat', host: 'Mamadou Bah', cover: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&q=80', viewers: 3120, startedAgo: '38 min' },
-  { id: 'tv3', title: 'Reportage terrain · coopératives d\'Abomey', category: 'Reportage', host: 'Awa Touré', cover: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=80', viewers: 1840, startedAgo: '1 h' },
-  { id: 'tv4', title: 'Conférence santé · paludisme', category: 'Santé', host: 'Dr Koné', cover: 'https://images.unsplash.com/photo-1559757175-08c5e0d3e1ec?w=800&q=80', viewers: 940, startedAgo: '2 h' },
-];
+// Dérivé à l'exécution à partir des programmes saisis en back-office (champ
+// `video` ou créneau marqué `live`). Voir computeLiveStreams() plus bas.
 
 interface ChatMsg { id: string; user: string; color: string; text: string; pinned?: boolean; }
-const seedChat: ChatMsg[] = [
-  { id: 'm1', user: 'Aminata · Dantokpa', color: '#FF3FA4', text: 'Excellente analyse sur le franc CFA !', pinned: true },
-  { id: 'm2', user: 'Kouassi · Akpakpa', color: '#0066FF', text: 'Question : qu\'en est-il des PME locales ?' },
-  { id: 'm3', user: 'Fatou · Cadjèhoun', color: '#E8B21A', text: "Bravo à l'équipe IPPOO" },
-  { id: 'm4', user: 'Ibrahim · Parakou', color: '#9B51E0', text: 'On suit depuis l\'intérieur, merci pour ce plateau' },
-  { id: 'm5', user: 'Mariam · Calavi', color: '#FF6A00', text: 'Pouvez-vous reparler des coopératives ?' },
-];
+// Le chat live démarre vide ; les messages sont saisis en temps réel via le
+// formulaire (cf. setChat) — aucun message fictif n'est plus injecté.
 
 const moments = [
   { id: 'mo1', title: 'Le franc CFA expliqué en 60 secondes', duration: '1:02', views: '12k', cover: 'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=600&q=80' },
@@ -115,17 +108,55 @@ export function LiveView({ onBack }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [tab, setTab] = useState<'grille' | 'replay' | 'alertes'>('grille');
   const [mode, setMode] = useState<'radio' | 'tv'>('radio');
-  const [activeStream, setActiveStream] = useState<LiveStream>(liveStreams[0]);
+
+  // Streams TV : 100% dérivés des programmes admin qui exposent une URL vidéo.
+  // Pas d'URL vidéo en back-office → aucun stream affiché (zéro donnée fictive).
+  const liveStreams: LiveStream[] = program
+    .filter((p) => !!p.video && p.video.trim())
+    .map((p, i) => ({
+      id: p.title ? `live-${i}-${p.time}` : `live-${i}`,
+      title: p.title,
+      category: p.category,
+      host: p.host,
+      cover: p.cover,
+      viewers: p.viewers ?? 0,
+      startedAgo: p.live ? 'En direct' : p.time,
+    }));
+
+  const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
+  // Repli neutre pour éviter tout crash quand aucun stream TV n'est configuré
+  // côté admin. Les sections TV sont par ailleurs masquées dans ce cas
+  // (cf. `mode === 'tv'` ⇒ pas de liveStreams ⇒ on bascule sur la radio).
+  const FALLBACK_STREAM: LiveStream = { id: '', title: '', category: '', host: '', cover: '', viewers: 0, startedAgo: '' };
+  const activeStream: LiveStream =
+    liveStreams.find((s) => s.id === activeStreamId) ?? liveStreams[0] ?? FALLBACK_STREAM;
+  // Garde l'id actif synchronisé même quand l'admin met à jour la grille.
+  useEffect(() => {
+    if (!activeStream && liveStreams.length) setActiveStreamId(liveStreams[0].id);
+    else if (activeStream && activeStream.id !== activeStreamId) setActiveStreamId(activeStream.id);
+  }, [activeStream?.id, liveStreams.length]);
+
+  // URL TV : on retrouve le programme correspondant pour récupérer son URL `video`.
+  const activeProgram = activeStream
+    ? program.find((p) => (p.title && `live-${program.indexOf(p)}-${p.time}` === activeStream.id) || p.title === activeStream.title)
+    : undefined;
+  const tvUrl = activeProgram?.video?.trim() || '';
+
   const [videoPlaying, setVideoPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
-  const [chat, setChat] = useState<ChatMsg[]>(seedChat);
+  const [chat, setChat] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [hearts, setHearts] = useState(847);
-  const [listeners, setListeners] = useState(2412);
-  const [streamViewers, setStreamViewers] = useState<Record<string, number>>(() =>
-    Object.fromEntries(liveStreams.map((s) => [s.id, s.viewers])),
-  );
-  useHlsVideo(videoRef, TV_STREAM_URL);
+  const [hearts, setHearts] = useState(0);
+  const [listeners, setListeners] = useState(0);
+  const [streamViewers, setStreamViewers] = useState<Record<string, number>>({});
+  useEffect(() => {
+    setStreamViewers((prev) => {
+      const next: Record<string, number> = { ...prev };
+      for (const s of liveStreams) if (next[s.id] == null) next[s.id] = s.viewers;
+      return next;
+    });
+  }, [liveStreams.length]);
+  useHlsVideo(videoRef, tvUrl);
 
   // Live program audio URL (admin-configured) wins over fallback
   // (note: liveShow is computed lower; we'll resolve via getter)
@@ -230,10 +261,14 @@ export function LiveView({ onBack }: Props) {
         <div className="bg-[#F4F4F6] p-1 flex gap-1" style={{ borderRadius: 999 }}>
           {([['radio', Radio, 'Radio'], ['tv', Tv, 'TV en direct']] as const).map(([k, Icon, label]) => {
             const a = mode === k;
+            // Bouton TV désactivé tant qu'aucun stream n'a été configuré en admin.
+            const disabled = k === 'tv' && liveStreams.length === 0;
             return (
               <button
                 key={k}
-                onClick={() => setMode(k)}
+                onClick={() => !disabled && setMode(k)}
+                disabled={disabled}
+                title={disabled ? "Aucun direct TV configuré pour l'instant" : undefined}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 transition-all"
                 style={{
                   background: a ? '#1a1a1a' : 'transparent',
@@ -360,10 +395,10 @@ export function LiveView({ onBack }: Props) {
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              {liveStreams.filter((s) => s.id !== activeStream.id).map((s) => (
+              {liveStreams.filter((s) => s.id !== activeStream?.id).map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => setActiveStream(s)}
+                  onClick={() => setActiveStreamId(s.id)}
                   className="text-left bg-white border border-[#F0F0F0] overflow-hidden"
                   style={{ borderRadius: 12 }}
                 >

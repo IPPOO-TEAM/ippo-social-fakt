@@ -13,6 +13,7 @@ import { type SectionKey } from '../../data/sections';
 import { useResolvedSections } from '../../lib/admin-overrides';
 import { usePublicPages } from '../../lib/admin-overrides';
 import { subscribeToPush, unsubscribeFromPush } from '../../lib/push';
+import { changePassword } from '../../lib/api';
 
 // See LangSwitcher.tsx — African languages temporarily off the picker until
 // their dictionary entries stop falling back to French.
@@ -149,14 +150,25 @@ export function ProfileView({ onOpenFavorites, onOpenHistory, onOpenAuth }: Prop
  const [pwdForm, setPwdForm] = useState({ current: '', next: '', confirm: '' });
  const [pwdError, setPwdError] = useState<string | null>(null);
  const openPwd = () => { setPwdForm({ current: '', next: '', confirm: '' }); setPwdError(null); setPwdOpen(true); };
- const savePwd = (e: React.FormEvent) => {
+ const [pwdSaving, setPwdSaving] = useState(false);
+ const savePwd = async (e: React.FormEvent) => {
    e.preventDefault();
-   if (pwdForm.next.length < 6) { setPwdError('Au moins 6 caractères'); return; }
+   if (pwdForm.next.length < 8) { setPwdError('Au moins 8 caractères'); return; }
    if (pwdForm.next !== pwdForm.confirm) { setPwdError('Les mots de passe ne correspondent pas'); return; }
    if (pwdForm.current && pwdForm.current === pwdForm.next) { setPwdError('Choisissez un mot de passe différent'); return; }
-   try { localStorage.setItem('ippoo:pwd_changed_at', new Date().toISOString()); } catch {}
-   setPwdOpen(false);
-   show('Mot de passe mis à jour', 'success');
+   setPwdSaving(true);
+   setPwdError(null);
+   try {
+     // Changement RÉEL côté serveur (Supabase Auth via l'Edge Function).
+     await changePassword(pwdForm.next);
+     setPwdOpen(false);
+     setPwdForm({ current: '', next: '', confirm: '' });
+     show('Mot de passe mis à jour', 'success');
+   } catch (err) {
+     setPwdError(err instanceof Error ? err.message : 'Échec de la mise à jour. Reconnectez-vous puis réessayez.');
+   } finally {
+     setPwdSaving(false);
+   }
  };
 
  const publicPages = usePublicPages();
@@ -500,18 +512,18 @@ export function ProfileView({ onOpenFavorites, onOpenHistory, onOpenAuth }: Prop
  </label>
  <label className="block">
  <div className="text-[#717182] mb-1" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em' }}>NOUVEAU MOT DE PASSE</div>
- <input type="password" autoComplete="new-password" required minLength={6} value={pwdForm.next} onChange={(e) => setPwdForm({ ...pwdForm, next: e.target.value })} className="w-full bg-[#FAFAFA] px-3 py-3 outline-none" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}/>
+ <input type="password" autoComplete="new-password" required minLength={8} value={pwdForm.next} onChange={(e) => setPwdForm({ ...pwdForm, next: e.target.value })} className="w-full bg-[#FAFAFA] px-3 py-3 outline-none" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}/>
  </label>
  <label className="block">
  <div className="text-[#717182] mb-1" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em' }}>CONFIRMER</div>
- <input type="password" autoComplete="new-password" required minLength={6} value={pwdForm.confirm} onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })} className="w-full bg-[#FAFAFA] px-3 py-3 outline-none" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}/>
+ <input type="password" autoComplete="new-password" required minLength={8} value={pwdForm.confirm} onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })} className="w-full bg-[#FAFAFA] px-3 py-3 outline-none" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}/>
  </label>
  {pwdError && (
    <div className="text-[#FF3B30]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.78rem', fontWeight: 600 }}>{pwdError}</div>
  )}
  <div className="flex items-center gap-2 pt-2" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
  <button type="button" onClick={() => setPwdOpen(false)} className="flex-1 py-3 bg-[#F4F4F6] text-[#1a1a1a]" style={{ borderRadius: 999, fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.88rem' }}>Annuler</button>
- <button type="submit" className="flex-1 py-3 bg-[#0066FF] text-white" style={{ borderRadius: 999, fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}>Mettre à jour</button>
+ <button type="submit" disabled={pwdSaving} className="flex-1 py-3 bg-[#0066FF] text-white disabled:opacity-60" style={{ borderRadius: 999, fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}>{pwdSaving ? 'Mise à jour…' : 'Mettre à jour'}</button>
  </div>
  </form>
  </div>
@@ -542,10 +554,11 @@ export function ProfileView({ onOpenFavorites, onOpenHistory, onOpenAuth }: Prop
  );
 }
 
-const SUBSCRIBABLE: SectionKey[] = ['actu', 'informel', 'podcast', 'videos', 'opportunities', 'jeunesse', 'sante', 'consommation', 'societe', 'communaute', 'services', 'live'];
+const NON_SUBSCRIBABLE: SectionKey[] = ['home', 'search', 'profile'];
 
 function SubsList({ followed, onToggle }: { followed: string[]; onToggle: (key: string) => void }) {
- const list = useResolvedSections().filter((s) => !s.hidden && SUBSCRIBABLE.includes(s.key));
+ // Inclut toutes les sections visibles (code + custom), sauf les routes système.
+ const list = useResolvedSections().filter((s) => !s.hidden && !NON_SUBSCRIBABLE.includes(s.key as SectionKey));
  return (
  <div className="px-4 pb-3 pt-1 space-y-1.5 bg-[#FAFAFA]">
  {list.map((s) => {

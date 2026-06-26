@@ -9,8 +9,8 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import {
-  prices as seedPrices, formatFcfa, priceTrendPct, inflationSeries, panierMenager, articles as seedArticles,
-  type PriceItem, type PriceCategory,
+  formatFcfa, priceTrendPct, inflationSeries, panierMenager,
+  type Article, type PriceItem, type PriceCategory,
 } from '../../data/mock';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { tap } from '../../lib/haptic';
@@ -19,7 +19,7 @@ import { useLiveContent } from '../../lib/live-content';
 
 interface Props {
   onBack: () => void;
-  onOpenArticle?: (a: typeof seedArticles[number]) => void;
+  onOpenArticle?: (a: Article) => void;
 }
 
 type Sort = 'name' | 'price-asc' | 'price-desc' | 'trend-up' | 'trend-down';
@@ -306,8 +306,8 @@ export function ConsommationView({ onBack, onOpenArticle }: Props) {
   const [sort, setSort] = useState<Sort>('name');
   const [period, setPeriod] = useState<Period>('week');
   const [open, setOpen] = useState<PriceItem | null>(null);
-  const { items: prices } = useLiveContent<PriceItem>('price', seedPrices);
-  const { items: articles } = useLiveContent<typeof seedArticles[number]>('article', seedArticles);
+  const { items: prices } = useLiveContent<PriceItem>('price');
+  const { items: articles } = useLiveContent<Article>('article');
   const periodInfo = periodMeta.find((p) => p.k === period)!;
   const tFor = (p: PriceItem) => trendForPeriod(p, period);
 

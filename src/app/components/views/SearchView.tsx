@@ -1,7 +1,7 @@
 import { Search, TrendingUp, X, Mic, Newspaper, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { articles as seedArticles, episodes as seedEpisodes, videos as seedVideos, type Article, type Episode, type Video as VideoT } from '../../data/mock';
+import { type Article, type Episode, type Video as VideoT } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
 import { EmptyState } from '../EmptyState';
@@ -29,9 +29,9 @@ export function SearchView({ onOpenArticle, onOpenVideo, onPlay }: Props = {}) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState('all');
   const { items: recents, push: pushRecent, remove: removeRecent } = useRecentSearches();
-  const { items: articles } = useLiveContent<Article>('article', seedArticles);
-  const { items: episodes } = useLiveContent<Episode>('episode', seedEpisodes);
-  const { items: videos } = useLiveContent<VideoT>('video', seedVideos);
+  const { items: articles } = useLiveContent<Article>('article');
+  const { items: episodes } = useLiveContent<Episode>('episode');
+  const { items: videos } = useLiveContent<VideoT>('video');
 
   useEffect(() => {
     if (!query.trim()) return;

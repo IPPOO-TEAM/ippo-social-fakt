@@ -1,8 +1,9 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { optimizedUnsplash } from '../../lib/images';
 import { TrendingUp, Briefcase, Heart, GraduationCap, Users, Globe, ChevronRight } from 'lucide-react';
-import { articles as seedArticles, rubriques } from '../../data/mock';
+import { type Article } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
+import { useRubricsFor } from '../../lib/taxonomy';
 import type { SectionKey } from '../../data/sections';
 import type { Dossier } from './DossierDetail';
 import { dossiersData } from '../../data/dossiers';
@@ -26,7 +27,7 @@ const rubricToSection: Record<string, SectionKey> = {
 };
 
 interface Props {
-  onOpenArticle: (a: typeof seedArticles[number]) => void;
+  onOpenArticle: (a: Article) => void;
   onOpenSection?: (k: SectionKey) => void;
   onOpenDossier?: (d: Dossier) => void;
 }
@@ -35,9 +36,11 @@ export function ActuView({ onOpenArticle, onOpenSection, onOpenDossier }: Props)
   const [activeTab, setActiveTab] = useState<'fil' | 'rubriques' | 'dossiers'>('fil');
   const t = useT();
   const tc = useContentT();
-  const { items: articles } = useLiveContent<typeof seedArticles[number]>('article', seedArticles);
+  const { items: articles } = useLiveContent<Article>('article');
   const featured = articles[0];
   const rest = articles.slice(1);
+  // Rubriques dynamiques : reflètent ce que l'admin a configuré en back-office.
+  const dynRubrics = useRubricsFor('actu');
 
   return (
     <div className="pb-6">
@@ -80,6 +83,7 @@ export function ActuView({ onOpenArticle, onOpenSection, onOpenDossier }: Props)
       {activeTab === 'fil' && (
         <>
           {/* Featured — magazine card */}
+          {featured && (
           <section className="px-5 pt-1">
             <button onClick={() => onOpenArticle(featured)} className="block w-full text-left relative overflow-hidden aspect-[4/5]" style={{ borderRadius: 'var(--r-lg)' }}>
               <ImageWithFallback src={optimizedUnsplash(featured.image, 1200, 75)} alt={featured.title} className="w-full h-full object-cover" loading="lazy" decoding="async"/>
@@ -97,6 +101,7 @@ export function ActuView({ onOpenArticle, onOpenSection, onOpenDossier }: Props)
               </div>
             </button>
           </section>
+          )}
 
           <div className="px-5 mt-7 flex items-end justify-between">
             <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.35rem', color: '#1a1a1a', letterSpacing: '-0.02em' }}>
@@ -133,18 +138,19 @@ export function ActuView({ onOpenArticle, onOpenSection, onOpenDossier }: Props)
 
       {activeTab === 'rubriques' && (
         <div className="px-5 mt-4 grid grid-cols-2 gap-3">
-          {rubriques.map((r) => {
-            const Icon = iconMap[r.icon];
+          {dynRubrics.map((name) => {
+            const count = articles.filter((a) => a.category === name).length;
+            const route = rubricToSection[name] ?? 'actu';
             return (
-              <button key={r.id} onClick={() => onOpenSection?.(rubricToSection[r.name] ?? 'actu')} className="bg-white border border-[#F0F0F0] p-4 text-left hover:border-[#0066FF]/40 transition-colors">
-                <div className="w-10 h-10 flex items-center justify-center mb-3" style={{ background: r.bg, borderRadius: 'var(--r-xs)' }}>
-                  <Icon size={18} style={{ color: r.color }} strokeWidth={2.4} />
+              <button key={name} onClick={() => onOpenSection?.(route)} className="bg-white border border-[#F0F0F0] p-4 text-left hover:border-[#0066FF]/40 transition-colors">
+                <div className="w-10 h-10 flex items-center justify-center mb-3" style={{ background: '#0066FF1A', borderRadius: 'var(--r-xs)' }}>
+                  <TrendingUp size={18} style={{ color: '#0066FF' }} strokeWidth={2.4} />
                 </div>
                 <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>
-                  {r.name}
+                  {name}
                 </div>
                 <div className="text-[#717182] mt-0.5" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem' }}>
-                  {r.count} contenus
+                  {count} contenu{count > 1 ? 's' : ''}
                 </div>
               </button>
             );

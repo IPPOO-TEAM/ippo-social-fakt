@@ -2,9 +2,8 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { optimizedUnsplash } from '../../lib/images';
 import { Play, Radio, ArrowRight, TrendingUp, TrendingDown, Bookmark, Headphones, Mic, Clock } from 'lucide-react';
 import {
-  articles as seedArticles, episodes as seedEpisodes,
-  opportunities as seedOpportunities, prices as seedPrices,
-  formatFcfa, priceTrendPct, type Opportunity,
+  formatFcfa, priceTrendPct,
+  type Article, type Episode, type Opportunity, type PriceItem,
 } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
@@ -22,7 +21,7 @@ import heroDark from '../../../imports/social_fact_2.png';
 
 interface Props {
   onPlay: (t: PlayingTrack) => void;
-  onOpenArticle: (a: typeof seedArticles[number]) => void;
+  onOpenArticle: (a: Article) => void;
   onOpenSection?: (k: SectionKey) => void;
   onOpenOpportunity?: (o: Opportunity) => void;
 }
@@ -46,10 +45,10 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
   const { isDark } = useTheme();
   const t = useT();
   const tc = useContentT();
-  const { items: articles } = useLiveContent<typeof seedArticles[number]>('article', seedArticles);
-  const { items: episodes } = useLiveContent<typeof seedEpisodes[number]>('episode', seedEpisodes);
-  const { items: opportunities } = useLiveContent<Opportunity>('opportunity', seedOpportunities);
-  const { items: prices } = useLiveContent<typeof seedPrices[number]>('price', seedPrices);
+  const { items: articles } = useLiveContent<Article>('article');
+  const { items: episodes } = useLiveContent<Episode>('episode');
+  const { items: opportunities } = useLiveContent<Opportunity>('opportunity');
+  const { items: prices } = useLiveContent<PriceItem>('price');
   const hero = articles[0];
   const todayEpisode = episodes[0];
 
@@ -119,6 +118,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
       </div>
 
       {/* Featured — magazine card */}
+      {featured && (
       <section className="px-5 mt-1">
         <button onClick={() => onOpenArticle(featured)} className="block w-full text-left relative overflow-hidden aspect-[4/5]" style={{ borderRadius: 'var(--r-lg)' }}>
           <ImageWithFallback src={optimizedUnsplash(featured.image, 1200, 75)} alt={featured.title} className="w-full h-full object-cover" loading="lazy" decoding="async"/>
@@ -136,6 +136,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
           </div>
         </button>
       </section>
+      )}
 
       <section className="mt-5">
         <div className="w-full overflow-hidden bg-[#F4F4F6]">
@@ -149,6 +150,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
       </section>
 
       {/* Live — immersive broadcast card */}
+      {hero && (
       <section className="px-5 mt-5">
         <button
           onClick={() => onPlay({ id: 'live', title: 'Matinale Communautaire', show: 'Direct radio', image: hero.image, color: '#0066FF' })}
@@ -212,6 +214,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
         </button>
         <style>{`@keyframes wave { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }`}</style>
       </section>
+      )}
 
       {/* Section title */}
       <div className="px-5 mt-7 flex items-end justify-between">
@@ -301,6 +304,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
         </div>
 
         {/* Featured episode — magazine-style */}
+        {todayEpisode && (
         <div className="px-5">
           <div
             onClick={() => onPlay(todayEpisode)}
@@ -345,6 +349,7 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
             </div>
           </div>
         </div>
+        )}
 
         {/* Up next — horizontal scroll */}
         <div className="mt-4 px-5 flex items-center justify-between">

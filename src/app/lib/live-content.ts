@@ -2,16 +2,16 @@ import { useEffect, useState } from 'react';
 import { listContent, getContent, type Resource } from './api';
 import { cacheGet, cacheSet } from './offline-cache';
 
-// Returns seed items immediately, then swaps in server items on success.
-// - Empty server response (DB not seeded yet) keeps the seed visible.
-// - Network failure keeps whatever was cached or the seed.
-// The hook merges by id: server items override seed entries with the same id,
-// brand-new server items are appended at the front.
+// 100 % SERVER-ONLY.
+// Les données proviennent EXCLUSIVEMENT du serveur (tables relationnelles). Le
+// paramètre `seed` n'est plus affiché — il est ignoré et conservé uniquement
+// pour compatibilité d'appel. Aucune donnée de démonstration n'est rendue.
+// Le cache hors-ligne (dernière réponse serveur réelle) sert de repli réseau.
 export function useLiveContent<T extends { id: string | number }>(
   resource: Resource,
-  seed: T[],
+  _seed?: T[],
 ): { items: T[]; loading: boolean; refresh: () => void } {
-  const [items, setItems] = useState<T[]>(seed);
+  const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
@@ -19,18 +19,18 @@ export function useLiveContent<T extends { id: string | number }>(
     let cancelled = false;
     const cacheKey = `live:${resource}`;
     (async () => {
-      // Cache-first to avoid an empty flash when offline / on slow networks.
+      // Cache-first : réutilise la dernière réponse SERVEUR (pas un seed) pour
+      // éviter un flash vide hors-ligne / sur réseau lent.
       try {
         const cached = await cacheGet<T[]>(cacheKey);
         if (!cancelled && Array.isArray(cached) && cached.length) {
-          setItems(merge(seed, cached));
+          setItems(cached);
         }
       } catch { /* ignore */ }
       try {
         const remote = await listContent<T>(resource);
         if (cancelled) return;
-        const merged = merge(seed, remote);
-        setItems(merged);
+        setItems(remote);
         void cacheSet(cacheKey, remote);
       } catch (e) {
         console.log(`useLiveContent ${resource} fetch failed:`, e);
@@ -39,29 +39,27 @@ export function useLiveContent<T extends { id: string | number }>(
       }
     })();
     return () => { cancelled = true; };
-  }, [resource, tick, seed]);
+  }, [resource, tick]);
 
   return { items, loading, refresh: () => setTick((n) => n + 1) };
 }
 
-// Single-item version: returns the seed match instantly, then upgrades to the
-// server item once fetched. `notFound` becomes true only when both the seed
-// AND the server agree the id doesn't exist — so the 404 page never flashes
-// for a freshly-published item the client hasn't pulled yet.
+// Version mono-élément, server-only. Le `fallbackList` est ignoré ; seul le
+// serveur fait autorité. `notFound` devient vrai si le serveur ne connaît pas
+// l'id.
 export function useLiveItem<T extends { id: string | number }>(
   resource: Resource,
   id: string | undefined,
-  fallbackList: T[],
+  _fallbackList?: T[],
 ): { item: T | null; loading: boolean; notFound: boolean } {
-  const seedMatch = id ? fallbackList.find((x) => String(x.id) === id) ?? null : null;
-  const [item, setItem] = useState<T | null>(seedMatch);
+  const [item, setItem] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     if (!id) { setItem(null); setLoading(false); setNotFound(true); return; }
     let cancelled = false;
-    setItem(seedMatch);
+    setItem(null);
     setNotFound(false);
     setLoading(true);
     (async () => {
@@ -69,7 +67,7 @@ export function useLiveItem<T extends { id: string | number }>(
         const remote = await getContent<T>(resource, id);
         if (cancelled) return;
         if (remote) setItem(remote);
-        else if (!seedMatch) setNotFound(true);
+        else setNotFound(true);
       } catch (e) {
         console.log(`useLiveItem ${resource}/${id} fetch failed:`, e);
       } finally {
@@ -77,17 +75,7 @@ export function useLiveItem<T extends { id: string | number }>(
       }
     })();
     return () => { cancelled = true; };
-    // seedMatch derives synchronously from id+fallbackList, so id is the right key.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource, id]);
 
   return { item, loading, notFound };
-}
-
-function merge<T extends { id: string | number }>(seed: T[], remote: T[]): T[] {
-  if (!remote.length) return seed;
-  const byId = new Map<string, T>();
-  for (const s of seed) byId.set(String(s.id), s);
-  for (const r of remote) byId.set(String(r.id), r);
-  return Array.from(byId.values());
 }

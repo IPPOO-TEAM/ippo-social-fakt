@@ -1,7 +1,7 @@
 import { motion } from 'motion/react';
 import { ChevronLeft, BookOpen, Mic, Video, ChevronRight, Share2 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { articles as seedArticles, episodes as seedEpisodes, videos as seedVideos, type Article, type Episode, type Video as VideoT } from '../../data/mock';
+import { type Article, type Episode, type Video as VideoT } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
 import { useT } from '../../lib/i18n';
@@ -17,6 +17,8 @@ export interface Dossier {
   image: string;
   color: string;
   premium?: boolean;
+  published?: boolean;
+  category?: string;
 }
 
 interface Props {
@@ -33,9 +35,9 @@ export function DossierDetail({ dossier, onClose, onOpenArticle, onOpenVideo, on
   const { isPremium } = useSubscription();
   const navigate = useNavigate();
   const locked = !!dossier.premium && !isPremium;
-  const { items: articles } = useLiveContent<Article>('article', seedArticles);
-  const { items: episodes } = useLiveContent<Episode>('episode', seedEpisodes);
-  const { items: videos } = useLiveContent<VideoT>('video', seedVideos);
+  const { items: articles } = useLiveContent<Article>('article');
+  const { items: episodes } = useLiveContent<Episode>('episode');
+  const { items: videos } = useLiveContent<VideoT>('video');
   const dossierArticles = articles.slice(0, 6);
   const dossierEpisodes = episodes.slice(0, 4);
   const dossierVideos = videos.slice(0, 3);

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Mail, Lock, User as UserIcon, ChevronLeft, Phone, Search, Check } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, ChevronLeft, Phone, Search, Check, ShieldCheck } from 'lucide-react';
 import { useUser, signInWithEmail, signUpWithEmail, signOutEverywhere } from '../lib/user';
 import { requestPasswordReset, supabase } from '../lib/api';
 import { useToast } from './Toast';
 import { useT } from '../lib/i18n';
 import { AFRICA, WORLD, ALL_COUNTRIES, type Country } from '../data/countries';
+import logoUrl from '../../imports/social_fakt_fav.jpg';
 
 interface Props {
   open: boolean;
@@ -20,7 +21,7 @@ export function AuthSheet({ open, onClose }: Props) {
   const t = useT();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
-  const [country, setCountry] = useState<Country>(ALL_COUNTRIES.find((c) => c.code === 'CI') ?? AFRICA[0]);
+  const [country, setCountry] = useState<Country>(ALL_COUNTRIES.find((c) => c.code === 'BJ') ?? AFRICA[0]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -83,21 +84,35 @@ export function AuthSheet({ open, onClose }: Props) {
           <motion.div
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-            className="fixed inset-x-0 bottom-0 z-[81] bg-white max-w-2xl mx-auto"
+            className="fixed inset-x-0 bottom-0 z-[81] bg-white max-w-2xl mx-auto overflow-hidden"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)', borderTopLeftRadius: 'var(--r-xl)', borderTopRightRadius: 'var(--r-xl)' }}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0F0F0]">
-              {mode !== 'login' ? (
-                <button onClick={() => setMode('login')} aria-label={t('common.back')} className="w-9 h-9 -ml-2 flex items-center justify-center">
-                  <ChevronLeft size={20}/>
+            {/* Hero de marque */}
+            <div className="relative px-5 pt-5 pb-6 text-white overflow-hidden" style={{ background: 'linear-gradient(140deg, #0066FF 0%, #2a1648 55%, #FF3FA4 130%)' }}>
+              <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full" style={{ background: 'rgba(255,255,255,0.12)' }}/>
+              <div className="absolute -bottom-20 -left-10 w-44 h-44 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}/>
+              <div className="relative flex items-center justify-between">
+                {mode !== 'login' ? (
+                  <button onClick={() => setMode('login')} aria-label={t('common.back')} className="w-9 h-9 -ml-2 flex items-center justify-center text-white/90 hover:text-white">
+                    <ChevronLeft size={20}/>
+                  </button>
+                ) : <div className="w-9"/>}
+                <div className="h-1 w-10 rounded-full bg-white/40"/>
+                <button onClick={onClose} aria-label={t('common.close')} className="w-9 h-9 -mr-2 flex items-center justify-center text-white/90 hover:text-white">
+                  <X size={18}/>
                 </button>
-              ) : <div className="w-9"/>}
-              <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1rem', color: '#1a1a1a' }}>
-                {mode === 'login' ? t('auth.login_title') : mode === 'register' ? t('auth.register_title') : t('auth.forgot_title')}
-              </h2>
-              <button onClick={onClose} aria-label={t('common.close')} className="w-9 h-9 -mr-2 flex items-center justify-center">
-                <X size={18}/>
-              </button>
+              </div>
+              <div className="relative flex flex-col items-center text-center mt-2">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-white/30 shadow-lg bg-white/10">
+                  <img src={logoUrl} alt="IPPOO Social-Fact" className="w-full h-full object-cover"/>
+                </div>
+                <h2 className="mt-3" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.3rem', letterSpacing: '-0.02em' }}>
+                  {mode === 'login' ? t('auth.login_title') : mode === 'register' ? t('auth.register_title') : t('auth.forgot_title')}
+                </h2>
+                <p className="text-white/80 mt-1" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.82rem' }}>
+                  {mode === 'login' ? 'Heureux de vous revoir sur IPPOO' : mode === 'register' ? 'Rejoignez la communauté IPPOO' : 'Réinitialisez votre mot de passe'}
+                </p>
+              </div>
             </div>
 
             {user.authed ? (
@@ -127,8 +142,8 @@ export function AuthSheet({ open, onClose }: Props) {
                       type="button"
                       onClick={googleSignIn}
                       disabled={loading}
-                      className="w-full py-3.5 bg-white border border-[#E5E5EA] flex items-center justify-center gap-3 disabled:opacity-50"
-                      style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.9rem', color: '#1a1a1a' }}
+                      className="w-full py-3.5 bg-white border border-[#E5E5EA] flex items-center justify-center gap-3 disabled:opacity-50 transition-colors hover:bg-[#FAFAFA]"
+                      style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '0.9rem', color: '#1a1a1a', borderRadius: 14 }}
                     >
                       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                         <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.91c1.7-1.57 2.69-3.88 2.69-6.61z"/>
@@ -154,14 +169,14 @@ export function AuthSheet({ open, onClose }: Props) {
                     <button
                       type="button"
                       onClick={() => setPickerOpen(true)}
-                      className="flex items-center gap-1.5 px-3 bg-[#FAFAFA]"
-                      style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.88rem', fontWeight: 600, color: '#1a1a1a' }}
+                      className="flex items-center gap-1.5 px-3 bg-[#F6F7F9] border border-transparent"
+                      style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.88rem', fontWeight: 600, color: '#1a1a1a', borderRadius: 14 }}
                       aria-label={t('auth.choose_country')}
                     >
                       <span style={{ minWidth: 26, padding: '1px 5px', background: '#FFFFFF', border: '1px solid #EAEAEE', fontFamily: 'Inter, sans-serif', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.06em', borderRadius: 4, textAlign: 'center' }}>{country.code}</span>
                       <span>{country.dial}</span>
                     </button>
-                    <div className="flex items-center gap-3 bg-[#FAFAFA] px-3 flex-1">
+                    <div className="flex items-center gap-3 bg-[#F6F7F9] px-3.5 flex-1 border border-transparent transition-colors focus-within:border-[#0066FF] focus-within:bg-white" style={{ borderRadius: 14 }}>
                       <Phone size={16} className="text-[#717182] flex-shrink-0"/>
                       <input
                         type="tel"
@@ -178,7 +193,7 @@ export function AuthSheet({ open, onClose }: Props) {
                 )}
                 <Field icon={Mail} type="email" placeholder={t('auth.email')} value={form.email} onChange={(v) => setForm({ ...form, email: v })} required/>
                 {mode !== 'forgot' && (
-                  <Field icon={Lock} type="password" placeholder={t('auth.password')} value={form.password} onChange={(v) => setForm({ ...form, password: v })} required minLength={6}/>
+                  <Field icon={Lock} type="password" placeholder={t('auth.password')} value={form.password} onChange={(v) => setForm({ ...form, password: v })} required minLength={8}/>
                 )}
 
                 {mode === 'login' && (
@@ -189,8 +204,8 @@ export function AuthSheet({ open, onClose }: Props) {
 
                 <button
                   type="submit" disabled={loading}
-                  className="w-full py-3.5 bg-[#0066FF] text-white disabled:opacity-50"
-                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.9rem' }}
+                  className="w-full py-3.5 text-white disabled:opacity-50 shadow-lg transition-transform active:scale-[0.99]"
+                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 700, fontSize: '0.92rem', borderRadius: 14, background: 'linear-gradient(135deg, #0066FF 0%, #FF3FA4 140%)', boxShadow: '0 12px 28px -12px rgba(0,102,255,0.6)' }}
                 >
                   {loading ? '…' : mode === 'login' ? t('common.login') : mode === 'register' ? t('common.register') : t('common.continue')}
                 </button>
@@ -208,6 +223,10 @@ export function AuthSheet({ open, onClose }: Props) {
                     </span>
                   </button>
                 )}
+
+                <div className="flex items-center justify-center gap-1.5 pt-1 text-[#9A9AA8]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem' }}>
+                  <ShieldCheck size={12}/> Connexion sécurisée · Vos données restent privées
+                </div>
                 </form>
               </div>
             )}
@@ -296,7 +315,10 @@ function Field({ icon: Icon, ...rest }: { icon: typeof Mail } & {
   type?: string; placeholder: string; value: string; onChange: (v: string) => void; required?: boolean; minLength?: number;
 }) {
   return (
-    <div className="flex items-center gap-3 bg-[#FAFAFA] px-3">
+    <div
+      className="flex items-center gap-3 bg-[#F6F7F9] px-3.5 border border-transparent transition-colors focus-within:border-[#0066FF] focus-within:bg-white"
+      style={{ borderRadius: 14 }}
+    >
       <Icon size={16} className="text-[#717182] flex-shrink-0"/>
       <input
         type={rest.type ?? 'text'}
@@ -305,8 +327,8 @@ function Field({ icon: Icon, ...rest }: { icon: typeof Mail } & {
         onChange={(e) => rest.onChange(e.target.value)}
         required={rest.required}
         minLength={rest.minLength}
-        className="flex-1 py-3 bg-transparent border-0 outline-none"
-        style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.88rem' }}
+        className="flex-1 py-3.5 bg-transparent border-0 outline-none"
+        style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}
       />
     </div>
   );

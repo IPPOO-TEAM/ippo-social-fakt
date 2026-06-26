@@ -1,5 +1,5 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { ChevronLeft, Share2, Bookmark, MapPin, Clock, Type } from 'lucide-react';
+import { ChevronLeft, Share2, Bookmark, MapPin, Clock } from 'lucide-react';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useFavorites, useHistory, useViewCount } from '../../lib/storage';
@@ -114,96 +114,37 @@ export function ArticleDetail({ article, onBack }: Props) {
  )}
 
  {!locked && <>
- <p className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75 }}>
- À <strong>{article.location}</strong>, l'évolution observée sur le terrain confirme une tendance plus large
- que la rédaction d'IPPOO suit depuis plusieurs semaines. Au-delà des chiffres, ce sont les habitudes des
- ménages, l'organisation des acteurs économiques et la place laissée aux initiatives communautaires qui se
- redessinent en profondeur, souvent loin des projecteurs nationaux.
- </p>
-
- <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: '#1a1a1a', letterSpacing: '-0.015em', marginTop: '0.5rem' }}>
- Ce qui se joue concrètement
- </h2>
- <p className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75 }}>
- Les acteurs locaux interrogés décrivent une dynamique nouvelle. Les commerçants, regroupés en coopératives
- ou en associations de quartier, ont mutualisé leurs achats pour négocier de meilleurs tarifs auprès des
- grossistes. En parallèle, les ménages, premiers concernés, adaptent leurs paniers d'achat au plus près,
- arbitrant entre produits locaux, importés et alternatives saisonnières. Plusieurs <em>bonnes pratiques</em>
- se diffusent désormais d'un quartier à l'autre, portées par les radios communautaires et les groupes WhatsApp
- de voisinage qui jouent un rôle d'agrégateur d'information.
- </p>
-
- <blockquote className="pl-5 py-3 my-2" style={{ borderLeft: `4px solid ${article.color}`, fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: '1.08rem', color: '#1a1a1a', lineHeight: 1.45, letterSpacing: '-0.005em' }}>
- « Cette approche collective change la donne pour nos familles et redonne de la fierté à nos métiers. Nous
- voyons enfin que ce que nous faisons compte, et que d'autres veulent reproduire ce que nous avons réussi
- à construire ici. »
- <span className="block mt-2 text-[#717182]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.78rem', fontWeight: 500 }}>
- Témoignage recueilli sur place
- </span>
- </blockquote>
-
- <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: '#1a1a1a', letterSpacing: '-0.015em' }}>
- Les chiffres qui comptent
- </h2>
- <p className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75 }}>
- Les premières estimations partagées par les organisations de terrain font état d'un effet visible dès les
- premières semaines : économies pour les ménages, hausse modérée des volumes échangés, meilleure visibilité
- pour les producteurs. Les structures d'appui (ONG, mutuelles, plateformes coopératives) soulignent que la
- réussite repose sur trois conditions claires : <strong>la transparence sur les prix</strong>, <strong>la
- régularité de l'approvisionnement</strong>, et <strong>un accompagnement de proximité</strong> pour les
- nouveaux entrants. Sans ces trois piliers, les gains restent fragiles et concentrés sur les acteurs déjà
- organisés.
- </p>
-
- <div className="grid grid-cols-3 gap-2.5 my-2">
- {[
- { label: 'Quartiers concernés', value: '12+', tone: '#0066FF' },
- { label: 'Acteurs mobilisés', value: '230', tone: article.color },
- { label: 'Évolution sur 30 j', value: '+18 %', tone: '#00C853' },
- ].map((k) => (
- <div key={k.label} className="bg-[#FAFAFA] p-3" style={{ borderRadius: 'var(--r-md)' }}>
- <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.15rem', color: k.tone, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
- {k.value}
- </div>
- <div className="text-[#717182] mt-1" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem', lineHeight: 1.3 }}>
- {k.label}
- </div>
- </div>
- ))}
- </div>
-
- <h2 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: '#1a1a1a', letterSpacing: '-0.015em' }}>
- Vers une suite plus large ?
- </h2>
- <p className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75 }}>
- Les autorités locales saluent l'initiative et étudient la possibilité de l'étendre à d'autres communes.
- Plusieurs structures d'accompagnement se sont déjà manifestées pour former de nouveaux porteurs de projets
- dans les mois à venir. La rédaction d'IPPOO continuera de suivre ce dossier sur les prochaines semaines,
- avec des reportages sonores et vidéo dans les quartiers concernés. Si vous êtes acteur de cette dynamique,
- vous pouvez écrire à la rédaction pour partager votre expérience, c'est ce qui permet à ce type d'enquête
- de rester ancrée dans le réel.
- </p>
-
- <p className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75 }}>
- À plus long terme, plusieurs questions restent ouvertes : la capacité à <em>maintenir la dynamique</em>
- quand l'attention médiatique retombe, la solidité des modèles économiques face aux chocs externes, et
- surtout l'inclusion des publics les plus éloignés des circuits d'information. C'est précisément sur ces
- angles morts que la rédaction concentrera ses prochaines enquêtes.
- </p>
-
- <div className="bg-[#FAFAFA] p-4 flex items-start gap-3" style={{ borderRadius: 'var(--r-md)' }}>
- <Type size={18} className="text-[#0066FF] mt-0.5 flex-shrink-0"/>
- <div>
- <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: '#1a1a1a' }}>
- {t('sheet.takeaway')}
- </div>
- <ul className="text-[#1a1a1a]/85 mt-2 space-y-1.5" style={{ fontSize: '0.85rem', lineHeight: 1.5, listStyle: 'disc', paddingLeft: '1.1rem' }}>
- <li>Une dynamique territoriale concrète, mesurable et reproductible.</li>
- <li>Trois conditions de réussite : transparence, régularité, accompagnement.</li>
- <li>Un suivi prolongé par la rédaction sur les prochaines semaines.</li>
- </ul>
- </div>
- </div>
+ {/* Corps RÉEL de l'article saisi en back-office. Aucun texte fictif. */}
+ {article.body && article.body.trim() ? (
+   article.body.split(/\n{2,}/).map((para, i) => {
+     const trimmed = para.trim();
+     if (!trimmed) return null;
+     // Marqueur Markdown léger : `# ` → titre, `> ` → citation, sinon paragraphe.
+     if (trimmed.startsWith('# ')) {
+       return (
+         <h2 key={i} style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.25rem', color: '#1a1a1a', letterSpacing: '-0.015em', marginTop: '0.5rem' }}>
+           {trimmed.slice(2)}
+         </h2>
+       );
+     }
+     if (trimmed.startsWith('> ')) {
+       return (
+         <blockquote key={i} className="pl-5 py-3 my-2" style={{ borderLeft: `4px solid ${article.color}`, fontFamily: 'Montserrat, sans-serif', fontWeight: 600, fontSize: '1.08rem', color: '#1a1a1a', lineHeight: 1.45, letterSpacing: '-0.005em' }}>
+           {trimmed.slice(2)}
+         </blockquote>
+       );
+     }
+     return (
+       <p key={i} className="text-[#1a1a1a]/85" style={{ fontSize: '0.95rem', lineHeight: 1.75, whiteSpace: 'pre-line' }}>
+         {trimmed}
+       </p>
+     );
+   })
+ ) : (
+   <div className="text-[#717182] py-6 text-center" style={{ fontSize: '0.88rem' }}>
+     Le contenu complet de cet article sera bientôt disponible.
+   </div>
+ )}
 
  <div className="text-[#717182] pt-2 flex items-center gap-2 border-t border-[#F0F0F0]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.78rem' }}>
  <span className="w-1.5 h-1.5 bg-[#00C853]" style={{ borderRadius: 999 }}/>

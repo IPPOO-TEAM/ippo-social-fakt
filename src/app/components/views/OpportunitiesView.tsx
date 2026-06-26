@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { ChevronLeft, Calendar, Bell, Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { opportunities as seedOpportunities, type Opportunity } from '../../data/mock';
+import { type Opportunity } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import { useT } from '../../lib/i18n';
 import { useContentT } from '../../data/mock_translations';
@@ -22,7 +22,7 @@ export function OpportunitiesView({ onBack, onOpenOpportunity }: Props) {
   const tc = useContentT();
   const [tab, setTab] = useState<'fil' | 'calendrier' | 'alertes'>('fil');
   const [cat, setCat] = useState<string>('Toutes');
-  const { items: opportunities } = useLiveContent<Opportunity>('opportunity', seedOpportunities);
+  const { items: opportunities } = useLiveContent<Opportunity>('opportunity');
 
   const filtered = useMemo(() => {
     if (cat === 'Toutes') return opportunities;

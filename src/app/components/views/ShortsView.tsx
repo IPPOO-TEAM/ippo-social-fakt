@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { ChevronLeft, Heart, MessageCircle, Share2, Music2, Play, Pause, Volume2, VolumeX, Zap, Bookmark, Send, X } from 'lucide-react';
 import type { Short } from '../../data/mock';
-import { useResource } from '../../admin/store';
+import { useLiveContent } from '../../lib/live-content';
 import { useContentT } from '../../data/mock_translations';
 import { useReactions, useFavorites, useComments } from '../../lib/storage';
 import { toast } from 'sonner';
@@ -91,7 +91,7 @@ export function ShortsView() {
   const [paused, setPaused] = useState(false);
   const [showPlayHint, setShowPlayHint] = useState(false);
   const lastTap = useRef<{ id: string; t: number } | null>(null);
-  const { items: shorts } = useResource<Short>('shorts');
+  const { items: shorts } = useLiveContent<Short>('short');
 
   const handleTap = (s: Short) => {
     const now = Date.now();

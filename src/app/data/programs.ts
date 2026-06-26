@@ -9,6 +9,8 @@ export interface Program {
   cover: string;
   live?: boolean;
   audio?: string;
+  video?: string;        // URL/Stream HLS pour la diffusion TV en direct
+  viewers?: number;      // estimation de spectateurs (affiché dans le carrousel live)
 }
 
 export const seedPrograms: Program[] = [

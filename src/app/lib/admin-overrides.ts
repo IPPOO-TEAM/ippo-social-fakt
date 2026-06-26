@@ -4,6 +4,7 @@ import { themes, type WellbeingTheme } from '../data/wellbeing';
 import { loadSectionConfig, KEY_SECTIONS, type SectionConfig } from '../admin/AdminSections';
 import { loadThemeOverrides, KEY_THEMES, type ThemeOverride } from '../admin/AdminThemes';
 import { loadPages, KEY_PAGES, type StaticPage } from '../admin/AdminPages';
+import { useAllSections } from './taxonomy';
 
 function useSyncedStore<T>(key: string, loader: () => T): T {
   const [state, setState] = useState<T>(() => loader());
@@ -29,10 +30,13 @@ export interface ResolvedSection extends Section {
 
 export function useResolvedSections(): ResolvedSection[] {
   const config = useSyncedStore<SectionConfig[]>(KEY_SECTIONS, loadSectionConfig);
+  // Inclut les sections custom créées dans le back-office.
+  const all = useAllSections();
+  const baseMap: Record<string, Section> = Object.fromEntries(all.map((s) => [s.key, s]));
   return config
-    .filter((c) => sectionMap[c.key])
+    .filter((c) => baseMap[c.key])
     .map((c) => {
-      const base = sectionMap[c.key];
+      const base = baseMap[c.key];
       return {
         ...base,
         label: c.labelOverride || base.label,
@@ -43,6 +47,10 @@ export function useResolvedSections(): ResolvedSection[] {
     })
     .sort((a, b) => a.order - b.order);
 }
+
+// `sectionMap` reste exporté pour les anciens callers, mais ils devraient
+// migrer vers useAllSections() pour voir les sections custom.
+void sectionMap;
 
 export type ResolvedWellbeingTheme = typeof themes[number] & { hidden: boolean };
 

@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Newspaper, Mic, Calendar, AlertTriangle, Sparkles, type LucideIcon } from 'lucide-react';
 import { safeStorage, STORAGE_KEYS } from './storage-safe';
 import { fetchInbox, markNotifsRead, type InboxNotif } from './api';
 import { useRealtime } from './realtime';
+import { useUser } from './user';
+import { emitToast } from '../components/Toast';
 
 export interface Notif {
   id: string;
@@ -21,15 +23,11 @@ const ICONS: Record<Notif['iconKey'], LucideIcon> = {
 
 export function notifIcon(k: Notif['iconKey']) { return ICONS[k]; }
 
-const seed: Notif[] = [
-  { id: 'n1', iconKey: 'news', color: '#0066FF', title: 'Nouvel article · Marché de Dantokpa', time: 'Il y a 12 min', read: false },
-  { id: 'n2', iconKey: 'podcast', color: '#FF3FA4', title: 'Nouveau podcast disponible', time: 'Il y a 1h', read: false },
-  { id: 'n3', iconKey: 'event', color: '#00C853', title: 'Diaspora : webinaire Africa Investing demain 18h', time: 'Il y a 3h', read: false },
-  { id: 'n4', iconKey: 'alert', color: '#E8B21A', title: 'Coupure d\'eau prévue à Akpakpa', time: 'Il y a 5h', read: false },
-];
-
+// Aucune donnée de démonstration : les notifications proviennent uniquement du
+// serveur (inbox). Le cache local ne contient que de vraies notifications déjà
+// reçues, pour l'affichage hors-ligne.
 function read(): Notif[] {
-  return safeStorage.get<Notif[]>(KEY, seed);
+  return safeStorage.get<Notif[]>(KEY, []);
 }
 
 function write(arr: Notif[]) {
@@ -58,6 +56,7 @@ function fromInbox(n: InboxNotif): Notif {
 }
 
 export function useNotifications() {
+  const { user } = useUser();
   const [items, setItems] = useState<Notif[]>(() => read());
   // Server is authoritative once we successfully fetch; until then we
   // render the local cache so the bell doesn't flicker empty on cold start.
@@ -74,17 +73,34 @@ export function useNotifications() {
     };
   }, [serverBacked]);
 
+  // IDs déjà connus : sert à ne toaster QUE les notifications réellement
+  // nouvelles (pas tout le lot au premier chargement).
+  const knownIds = useRef<Set<string> | null>(null);
+
   const sync = useCallback(async () => {
+    // L'inbox exige une session : ne pas appeler en anonyme (évite les 401).
+    if (!user.authed) return;
     try {
       const r = await fetchInbox();
       const mapped = r.items.map(fromInbox);
+      // Toast flottant pour chaque nouvelle notification non lue.
+      if (knownIds.current === null) {
+        knownIds.current = new Set(mapped.map((n) => n.id));
+      } else {
+        for (const n of mapped) {
+          if (!knownIds.current.has(n.id)) {
+            knownIds.current.add(n.id);
+            if (!n.read) emitToast(n.title, 'info');
+          }
+        }
+      }
       setItems(mapped);
       setServerBacked(true);
       write(mapped);
     } catch {
       // Anonymous user or network down — keep the local cache.
     }
-  }, []);
+  }, [user.authed]);
 
   useEffect(() => {
     sync();
@@ -99,7 +115,7 @@ export function useNotifications() {
 
   // Temps réel : nouvelle notification serveur → la cloche se met à jour.
   // Le RLS limite déjà la diffusion aux notifications de l'utilisateur courant.
-  useRealtime('notifications', undefined, sync, true);
+  useRealtime('notifications', undefined, sync, user.authed);
 
   const markRead = (id: string) => {
     const next = items.map((n) => n.id === id ? { ...n, read: true } : n);

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFocusTrap } from '../../lib/focus-trap';
 import { motion } from 'motion/react';
 import { useFavorites, useHistory, useViewCount } from '../../lib/storage';
-import { episodes as seedEpisodes, type Episode } from '../../data/mock';
+import { type Episode } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
 import { useT } from '../../lib/i18n';
@@ -47,7 +47,7 @@ export function EpisodeDetail({ track, playing, onToggle, onClose }: Props) {
    window.addEventListener('keydown', h);
    return () => window.removeEventListener('keydown', h);
  }, [onClose]);
- const { items: episodes } = useLiveContent<Episode>('episode', seedEpisodes);
+ const { items: episodes } = useLiveContent<Episode>('episode');
  const episodeMeta = episodes.find((e) => e.id === track.id);
  const locked = !!episodeMeta?.premium && !isPremium;
 

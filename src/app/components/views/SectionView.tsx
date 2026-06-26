@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Sparkles, Play } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Section } from '../../data/sections';
-import { articles as seedArticles, episodes as seedEpisodes, videos as seedVideos, opportunities as seedOpportunities, type Article, type Video, type Opportunity, type Episode } from '../../data/mock';
+import { type Article, type Video, type Opportunity, type Episode } from '../../data/mock';
 import type { PlayingTrack } from '../MiniPlayer';
 import { useT } from '../../lib/i18n';
 import { useContentT } from '../../data/mock_translations';
@@ -24,14 +24,13 @@ export function SectionView({ section, onBack, onOpenArticle, onOpenVideo, onPla
   const tc = useContentT();
   const [activeRubric, setActiveRubric] = useState<string>(initialRubric ?? 'Tout');
   const Icon = section.icon;
-  const { items: articles } = useLiveContent<Article>('article', seedArticles);
-  const { items: episodes } = useLiveContent<Episode>('episode', seedEpisodes);
-  const { items: videos } = useLiveContent<Video>('video', seedVideos);
-  const { items: opportunities } = useLiveContent<Opportunity>('opportunity', seedOpportunities);
+  const { items: articles } = useLiveContent<Article>('article');
+  const { items: episodes } = useLiveContent<Episode>('episode');
+  const { items: videos } = useLiveContent<Video>('video');
+  const { items: opportunities } = useLiveContent<Opportunity>('opportunity');
 
   const sectionArticles = useMemo(() => {
-    const base = articles.filter((a) => a.section === section.key);
-    const pool = base.length ? base : articles.slice(0, 4);
+    const pool = articles.filter((a) => a.section === section.key);
     if (activeRubric === 'Tout') return pool;
     const q = activeRubric.toLowerCase();
     const tokens = q.split(/[ &']+/).filter((tk) => tk.length > 3);
@@ -42,20 +41,20 @@ export function SectionView({ section, onBack, onOpenArticle, onOpenVideo, onPla
     return match.length ? match : pool;
   }, [section.key, activeRubric, articles]);
 
-  const sectionEpisodes = useMemo(() => {
-    const filtered = episodes.filter((e) => e.section === section.key);
-    return filtered.length ? filtered : episodes.slice(0, 3);
-  }, [section.key, episodes]);
+  const sectionEpisodes = useMemo(
+    () => episodes.filter((e) => e.section === section.key),
+    [section.key, episodes],
+  );
 
-  const sectionVideos = useMemo(() => {
-    const filtered = videos.filter((v) => v.section === section.key);
-    return filtered.length ? filtered : videos.slice(0, 3);
-  }, [section.key, videos]);
+  const sectionVideos = useMemo(
+    () => videos.filter((v) => v.section === section.key),
+    [section.key, videos],
+  );
 
-  const sectionOpps = useMemo(() => {
-    const filtered = opportunities.filter((o) => o.section === section.key);
-    return filtered.length ? filtered : opportunities;
-  }, [section.key, opportunities]);
+  const sectionOpps = useMemo(
+    () => opportunities.filter((o) => o.section === section.key),
+    [section.key, opportunities],
+  );
 
   const showOpps = section.key === 'opportunities' || section.key === 'jeunesse' || sectionOpps.length > 0;
 

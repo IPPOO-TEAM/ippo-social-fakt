@@ -33,6 +33,9 @@ type Route = {
   // Filtres pour getByPrefix à partir des parts du préfixe (sans le dernier
   // segment vide après le `:` final).
   prefixFilter?: (parts: string[]) => Record<string, any>;
+  // Filtre SQL `like` optionnel (utile quand plusieurs ressources cohabitent
+  // dans la même table — typiquement app_config).
+  prefixLike?: (parts: string[]) => { column: string; pattern: string } | null;
   // Reconstruit la valeur renvoyée en lecture (par défaut: row.data).
   fromRow?: (row: any) => any;
 };
@@ -117,6 +120,16 @@ const ROUTES: Record<string, Route> = {
     // theme:<id> → app_config sous la clé complète
     table: "app_config", onConflict: "key",
     pk: (p) => ({ key: p.join(":") }),
+    toRow: (p, v) => ({ key: p.join(":"), value: v ?? {} }),
+    fromRow: (r) => r.value,
+  },
+  // ---- Carrousel publicitaire : stocké dans app_config sous `ad:<id>` ----
+  // L'objet complet est conservé (data jsonb). Liste/get/delete via les routes
+  // génériques /content/ad/* qui passent par getByPrefix/get/del.
+  ad: {
+    table: "app_config", onConflict: "key",
+    pk: (p) => ({ key: p.join(":") }),
+    prefixLike: () => ({ column: "key", pattern: "ad:%" }),
     toRow: (p, v) => ({ key: p.join(":"), value: v ?? {} }),
     fromRow: (r) => r.value,
   },
@@ -361,6 +374,10 @@ export const getByPrefix = async (prefix: string): Promise<any[]> => {
   let q = supabase.from(route.table).select("*");
   if (route.prefixFilter) {
     for (const [k, v] of Object.entries(route.prefixFilter(parts))) q = q.eq(k, v as any);
+  }
+  if (route.prefixLike) {
+    const lk = route.prefixLike(parts);
+    if (lk) q = q.like(lk.column, lk.pattern);
   }
   // Sinon : table de contenu → on renvoie toutes les lignes de la table.
   const { data, error } = await q.limit(2000);

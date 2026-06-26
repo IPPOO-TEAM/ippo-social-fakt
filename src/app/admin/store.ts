@@ -1,15 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { articles as seedArticles, episodes as seedEpisodes, videos as seedVideos, opportunities as seedOpportunities, prices as seedPrices, shorts as seedShorts } from '../data/mock';
-import { seedPrograms, type Program } from '../data/programs';
-import { dossiersData as seedDossiers } from '../components/views/ActuView';
-import { musicTracks as seedTracks } from '../data/wellbeing';
+import { type Program } from '../data/programs';
 import type { Article, Episode, Video, Opportunity, PriceItem, Short } from '../data/mock';
 import type { Dossier } from '../components/views/DossierDetail';
 import type { MusicTrack } from '../data/wellbeing';
 import { safeStorage, STORAGE_KEYS } from '../lib/storage-safe';
-import { listContent, saveContent, deleteContent, seedContent, type Resource as ApiResource } from '../lib/api';
+import { listContent, saveContent, deleteContent, type Resource as ApiResource } from '../lib/api';
 
-type Resource = 'articles' | 'episodes' | 'videos' | 'opportunities' | 'dossiers' | 'prices' | 'tracks' | 'shorts' | 'programs';
+type Resource = 'articles' | 'episodes' | 'videos' | 'opportunities' | 'dossiers' | 'prices' | 'tracks' | 'shorts' | 'programs' | 'ads' | 'wb_posts';
 
 // Local cache keys (also used as offline fallback when the API is unreachable).
 const KEYS: Record<Resource, string> = {
@@ -22,6 +19,8 @@ const KEYS: Record<Resource, string> = {
   tracks: STORAGE_KEYS.adminTracks,
   shorts: STORAGE_KEYS.adminShorts,
   programs: STORAGE_KEYS.adminPrograms,
+  ads: 'ippoo:admin:ads',
+  wb_posts: 'ippoo:admin:wb_posts',
 };
 
 // Map admin resource (plural) → server resource (singular).
@@ -35,22 +34,14 @@ const API_RESOURCE: Record<Resource, ApiResource> = {
   tracks: 'wb_track',
   shorts: 'short',
   programs: 'program',
+  ads: 'ad',
+  wb_posts: 'wb_post',
 };
 
-const SEEDS: Record<Resource, unknown[]> = {
-  articles: seedArticles,
-  episodes: seedEpisodes,
-  videos: seedVideos,
-  opportunities: seedOpportunities,
-  dossiers: seedDossiers,
-  prices: seedPrices,
-  tracks: seedTracks,
-  shorts: seedShorts,
-  programs: seedPrograms,
-};
-
+// Plus AUCUNE donnée de démonstration : le cache local ne contient que de
+// vraies données déjà récupérées du serveur. Défaut = tableau vide.
 function readCache<T>(r: Resource): T[] {
-  return safeStorage.get<T[]>(KEYS[r], SEEDS[r] as T[]);
+  return safeStorage.get<T[]>(KEYS[r], []);
 }
 
 type WriteError = 'quota' | 'unknown';
@@ -69,18 +60,6 @@ function writeCache<T>(r: Resource, value: T[]): void {
   } else {
     lastWriteError = 'quota';
     errorListeners.forEach((fn) => fn('quota'));
-  }
-}
-
-// One-shot per session: seed the server from local mocks if the table is empty.
-const seededOnce = new Set<Resource>();
-async function ensureSeeded<T extends { id: string }>(r: Resource, current: T[]): Promise<void> {
-  if (seededOnce.has(r) || current.length > 0) return;
-  seededOnce.add(r);
-  try {
-    await seedContent(API_RESOURCE[r], SEEDS[r] as T[]);
-  } catch (e) {
-    console.log(`[admin] seed ${r} skipped:`, e);
   }
 }
 
@@ -107,7 +86,6 @@ export function useResource<T extends { id: string }>(r: Resource) {
       setItems(fresh);
       writeCache(r, fresh);
       setError(null);
-      void ensureSeeded(r, fresh);
     } catch (e) {
       console.log(`[admin] refresh ${r} failed:`, e);
       if (mounted.current) setError(String((e as Error).message ?? e));
@@ -176,16 +154,11 @@ export function useResource<T extends { id: string }>(r: Resource) {
     }
   }, [r, items, commit]);
 
+  // « reset » ne réinjecte plus de données de démo : il recharge simplement
+  // l'état réel depuis le serveur.
   const reset = useCallback(async () => {
-    const seed = SEEDS[r] as T[];
-    commit(seed);
-    try {
-      await seedContent(API_RESOURCE[r], seed);
-      await refresh();
-    } catch (e) {
-      console.log(`[admin] reset ${r} failed:`, e);
-    }
-  }, [r, commit, refresh]);
+    await refresh();
+  }, [refresh]);
 
   return { items, loading, error, create, update, remove, reset, refresh };
 }

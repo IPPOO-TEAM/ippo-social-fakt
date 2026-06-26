@@ -19,7 +19,6 @@ interface PushHistoryEntry {
 }
 
 const KEY_HISTORY = 'ippoo:admin:push-history';
-const KEY_NOTIFS = 'ippoo:notifications';
 
 const ICON_OPTIONS: { value: Notif['iconKey']; label: string; color: string }[] = [
   { value: 'news', label: 'Article', color: '#0066FF' },
@@ -41,15 +40,6 @@ function loadHistory(): PushHistoryEntry[] {
   } catch { return []; }
 }
 
-function getFollowerCount(audience: string): number {
-  if (audience === 'all') return 12400;
-  try {
-    const raw = localStorage.getItem('ippoo:user');
-    if (!raw) return 0;
-    const user = JSON.parse(raw) as { followedSections?: string[] };
-    return user.followedSections?.includes(audience) ? Math.floor(800 + Math.random() * 1200) : Math.floor(400 + Math.random() * 600);
-  } catch { return 0; }
-}
 
 export function AdminPush() {
   const { show } = useAdminToast();
@@ -67,14 +57,13 @@ export function AdminPush() {
   }, [history]);
 
   const audienceOptions = useMemo(() => [
-    { value: 'all', label: 'Tous les abonnés (12.4k)' },
+    { value: 'all', label: 'Tous les utilisateurs' },
     ...sections
       .filter((s) => !['home', 'search', 'profile'].includes(s.key))
       .map((s) => ({ value: s.key, label: s.label })),
   ], []);
 
   const audienceLabel = audienceOptions.find((o) => o.value === audience)?.label ?? audience;
-  const estimated = useMemo(() => getFollowerCount(audience), [audience]);
 
   const validate = () => {
     const er: { title?: string; body?: string } = {};
@@ -94,12 +83,11 @@ export function AdminPush() {
   const [sending, setSending] = useState(false);
   const send = async () => {
     if (sending) return;
-    const meta = ICON_OPTIONS.find((i) => i.value === iconKey)!;
     setSending(true);
-    let serverResult: { sent: number; failed: number; pruned: number } | null = null;
+    let serverResult: { inbox: number; sent: number; failed: number; pruned: number } | null = null;
     try {
-      const r = await sendPushNotification({ title, body, url: `/${audience === 'all' ? '' : audience}` });
-      serverResult = { sent: r.sent, failed: r.failed, pruned: r.pruned };
+      const r = await sendPushNotification({ title, body, url: `/${audience === 'all' ? '' : audience}`, iconKey });
+      serverResult = { inbox: r.inbox, sent: r.sent, failed: r.failed, pruned: r.pruned };
     } catch (e) {
       console.log(`AdminPush send error: ${e}`);
       show(`Échec d'envoi : ${e instanceof Error ? e.message : String(e)}`, 'error');
@@ -112,28 +100,15 @@ export function AdminPush() {
       iconKey, title, body,
       audience, audienceLabel,
       sentAt: Date.now(),
-      estimatedRecipients: serverResult.sent,
+      estimatedRecipients: serverResult.inbox,
     };
     setHistory([entry, ...history]);
-
-    // Mirror in the in-app notifications drawer so admins see immediate feedback.
-    try {
-      const raw = localStorage.getItem(KEY_NOTIFS);
-      const current: Notif[] = raw ? JSON.parse(raw) : [];
-      const notif: Notif = {
-        id: entry.id, iconKey, color: meta.color,
-        title: title, time: 'À l\'instant', read: false,
-      };
-      const next = [notif, ...current];
-      localStorage.setItem(KEY_NOTIFS, JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent('storage:ippoo:notifications'));
-    } catch { /* ignore */ }
 
     setTitle(''); setBody(''); setErrors({});
     setSendOpen(false);
     setSending(false);
     show(
-      `Push envoyé · ${serverResult.sent} reçus · ${serverResult.failed} échecs${serverResult.pruned ? ` · ${serverResult.pruned} obsolètes purgés` : ''}`,
+      `Notification diffusée · ${serverResult.inbox} boîte(s) de réception · ${serverResult.sent} push reçus${serverResult.failed ? ` · ${serverResult.failed} échecs` : ''}`,
       'success',
     );
   };
@@ -163,7 +138,7 @@ export function AdminPush() {
             </div>
           </Field>
 
-          <Field label="Audience" hint={`~${estimated.toLocaleString('fr-FR')} destinataires estimés`}>
+          <Field label="Audience" hint="Diffusion à tous les utilisateurs inscrits">
             <Select value={audience} onChange={setAudience} options={audienceOptions} />
           </Field>
 
@@ -237,7 +212,7 @@ export function AdminPush() {
       <ConfirmDialog
         open={sendOpen}
         title="Envoyer cette notification ?"
-        message={`${estimated.toLocaleString('fr-FR')} abonnés (${audienceLabel}) recevront ce push. Cette action est irréversible.`}
+        message={`Tous les utilisateurs inscrits recevront cette notification (inbox + push). Cette action est irréversible.`}
         confirmLabel="Envoyer"
         onCancel={() => setSendOpen(false)}
         onConfirm={send}

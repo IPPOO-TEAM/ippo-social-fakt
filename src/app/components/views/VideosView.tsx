@@ -1,6 +1,6 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { Play, Eye, Zap, ArrowRight } from 'lucide-react';
-import { videos as seedVideos, shorts } from '../../data/mock';
+import { type Video, type Short } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -17,7 +17,7 @@ function formatViews(n: number | undefined): string {
 
 const filters = ['Tout', 'Capsules', 'Reportages', 'Portraits', 'Extraits'] as const;
 
-interface Props { onOpenVideo: (v: typeof seedVideos[number]) => void; }
+interface Props { onOpenVideo: (v: Video) => void; }
 
 export function VideosView({ onOpenVideo }: Props) {
   const [active, setActive] = useState<typeof filters[number]>('Tout');
@@ -25,7 +25,8 @@ export function VideosView({ onOpenVideo }: Props) {
   const navigate = useNavigate();
   const t = useT();
   const tc = useContentT();
-  const { items: videos } = useLiveContent<typeof seedVideos[number]>('video', seedVideos);
+  const { items: videos } = useLiveContent<Video>('video');
+  const { items: shorts } = useLiveContent<Short>('short');
   const featured = videos[0];
   const rest = videos.slice(1);
   const viewCounts = useViewCounts(videos.map((v) => `video:${v.id}`));
@@ -69,6 +70,7 @@ export function VideosView({ onOpenVideo }: Props) {
       </div>
 
       {/* Featured — cinematic */}
+      {featured && (
       <section className="px-5 pt-1">
         <button onClick={() => onOpenVideo(featured)} className="block w-full text-left relative overflow-hidden aspect-[4/5]" style={{ borderRadius: 'var(--r-lg)' }}>
           <ImageWithFallback src={featured.image} alt={featured.title} className="w-full h-full object-cover"/>
@@ -96,6 +98,7 @@ export function VideosView({ onOpenVideo }: Props) {
           </div>
         </button>
       </section>
+      )}
 
       {/* Shorts — teaser carousel opens dedicated /shorts feed */}
       <section className="mt-7">

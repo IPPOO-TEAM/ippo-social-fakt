@@ -1,7 +1,7 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { optimizedUnsplash } from '../../lib/images';
 import { Play, Download, Bookmark, History, Headphones, X } from 'lucide-react';
-import { episodes as seedEpisodes } from '../../data/mock';
+import { type Episode } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
 import { useFavorites } from '../../lib/storage';
@@ -13,10 +13,10 @@ import { useContentT } from '../../data/mock_translations';
 
 interface Props { onPlay: (t: PlayingTrack) => void; }
 
-const shows = [
- { name: 'Voix d\'Afrique', host: 'Aïcha Diallo', episodes: 24, color: '#0066FF', image: seedEpisodes[0].image },
- { name: 'Économie Locale', host: 'Mamadou Traoré', episodes: 18, color: '#FF8A00', image: seedEpisodes[1].image },
- { name: 'Terrain', host: 'Fatou Koné', episodes: 12, color: '#00C853', image: seedEpisodes[2].image },
+const showMeta = [
+ { name: 'Voix d\'Afrique', host: 'Aïcha Diallo', episodes: 24, color: '#0066FF' },
+ { name: 'Économie Locale', host: 'Mamadou Traoré', episodes: 18, color: '#FF8A00' },
+ { name: 'Terrain', host: 'Fatou Koné', episodes: 12, color: '#00C853' },
 ];
 
 export function PodcastView({ onPlay }: Props) {
@@ -25,7 +25,8 @@ export function PodcastView({ onPlay }: Props) {
  const { show: toast } = useToast();
  const t = useT();
  const tc = useContentT();
- const { items: episodes } = useLiveContent<typeof seedEpisodes[number]>('episode', seedEpisodes);
+ const { items: episodes } = useLiveContent<Episode>('episode');
+ const shows = showMeta.map((s, i) => ({ ...s, image: episodes[i]?.image ?? '' }));
  const filteredEpisodes = useMemo(
    () => (showFilter ? episodes.filter((e) => e.show === showFilter) : episodes),
    [showFilter, episodes]

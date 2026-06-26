@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { Heart, MessageCircle, Music2, TrendingUp } from 'lucide-react';
 import { useResource, type MusicTrack } from './store';
 import { PageHeader } from './PageHeader';
-import { Toolbar, Table, Field, Input, Modal, Btn, ImageUpload, MediaUpload, exportCsv } from './ui';
+import { Toolbar, Table, Field, Input, Textarea, Modal, Btn, ImageUpload, MediaUpload, exportCsv } from './ui';
 import { useWellbeing } from '../lib/wellbeing-store';
-import { themes, themeMap, moodLabel, type WellbeingTheme } from '../data/wellbeing';
+import { themes, themeMap, moodLabel, type WellbeingTheme, type WellbeingPost } from '../data/wellbeing';
 import { useAdminToast, ConfirmDialog } from './AdminToast';
 
 const emptyTrack = (): MusicTrack => ({
@@ -34,11 +34,30 @@ function StatCard({ icon: Icon, label, value, hint, color }: {
   );
 }
 
+const emptyPost = (): WellbeingPost => ({
+  id: `wbp-${Date.now()}`,
+  theme: 'solitude',
+  title: '',
+  body: '',
+  author: 'Anonyme',
+  anonymous: true,
+  date: new Date().toISOString().slice(0, 10),
+  moodBefore: { calm: 5, energy: 5 },
+});
+
 export function AdminBienEtre() {
   const { posts, responses, removePost, removeResponse } = useWellbeing();
   const { items: tracks, create, update, remove, reset } = useResource<MusicTrack>('tracks');
+  const {
+    items: wbPosts,
+    create: createPost,
+    update: updatePost,
+    remove: removeWbPost,
+  } = useResource<WellbeingPost>('wb_posts');
   const { show } = useAdminToast();
-  const [tab, setTab] = useState<'posts' | 'tracks' | 'insights'>('posts');
+  const [tab, setTab] = useState<'posts' | 'wb_posts' | 'tracks' | 'insights'>('posts');
+  const [editingPost, setEditingPost] = useState<WellbeingPost | null>(null);
+  const [postErrors, setPostErrors] = useState<{ title?: string }>({});
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<WellbeingTheme | 'all'>('all');
   const [editing, setEditing] = useState<MusicTrack | null>(null);
@@ -81,9 +100,6 @@ export function AdminBienEtre() {
     if (!editing) return;
     const er: Partial<Record<keyof MusicTrack, string>> = {};
     if (!editing.title.trim()) er.title = 'Le titre est requis.';
-    if (!editing.mood.trim()) er.mood = "L'ambiance est requise.";
-    if (!/^\d+:\d{2}$/.test(editing.duration.trim())) er.duration = 'Format mm:ss attendu.';
-    if (editing.themes.length === 0) er.themes = 'Sélectionnez au moins un thème.';
     setErrors(er);
     if (Object.keys(er).length > 0) { show('Champs invalides.', 'error'); return; }
     const isUpdate = tracks.some((t) => t.id === editing.id);
@@ -111,7 +127,7 @@ export function AdminBienEtre() {
         </div>
 
         <div className="flex items-center gap-1 p-1 bg-white border border-[#EAEAEE]" style={{ borderRadius: 999, width: 'fit-content' }}>
-          {(['posts', 'tracks', 'insights'] as const).map((k) => (
+          {(['posts', 'wb_posts', 'tracks', 'insights'] as const).map((k) => (
             <button
               key={k}
               onClick={() => setTab(k)}
@@ -122,10 +138,52 @@ export function AdminBienEtre() {
                 fontSize: '0.82rem', fontWeight: 700, borderRadius: 999,
               }}
             >
-              {k === 'posts' ? 'Modération' : k === 'tracks' ? 'Musiques' : 'Tendances'}
+              {k === 'posts' ? 'Modération' : k === 'wb_posts' ? 'Posts bien-être' : k === 'tracks' ? 'Musiques' : 'Tendances'}
             </button>
           ))}
         </div>
+
+        {tab === 'wb_posts' && (
+          <>
+            <Toolbar
+              search={search} onSearch={setSearch}
+              onCreate={() => { setEditingPost(emptyPost()); setPostErrors({}); }}
+              onExport={() => exportCsv('bien-etre-posts', wbPosts, [
+                { key: 'id', label: 'ID' },
+                { key: 'theme', label: 'Thème' },
+                { key: 'title', label: 'Titre' },
+                { key: 'body', label: 'Message' },
+                { key: 'author', label: 'Auteur' },
+              ])}
+              createLabel="Nouveau post"
+            />
+            <Table<WellbeingPost>
+              rows={wbPosts.filter((p) => {
+                const q = search.toLowerCase().trim();
+                if (!q) return true;
+                return (p.title + p.body + p.author).toLowerCase().includes(q);
+              })}
+              columns={[
+                {
+                  key: 'title', label: 'Titre',
+                  render: (p) => (
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{p.title || p.body.split('\n')[0] || '(sans titre)'}</div>
+                      <div style={{ fontSize: '0.72rem', color: '#717182' }}>{p.author} · {p.theme}</div>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'body', label: 'Extrait',
+                  render: (p) => <div className="line-clamp-2" style={{ fontSize: '0.78rem', color: '#1a1a1a' }}>{p.body}</div>,
+                },
+              ]}
+              onEdit={(p) => { setEditingPost(p); setPostErrors({}); }}
+              onDelete={(p) => { void removeWbPost(p.id); show('Post supprimé', 'info'); }}
+              deleteLabel={(p) => `« ${p.title || p.id} »`}
+            />
+          </>
+        )}
 
         {tab === 'posts' && (
           <>
@@ -321,7 +379,7 @@ export function AdminBienEtre() {
       >
         {editing && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} maxLength={120} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
+            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
             <Field label="Ambiance *" hint={errors.mood}><Input value={editing.mood} onChange={(e) => setEditing({ ...editing, mood: e.target.value })} style={{ borderColor: errors.mood ? '#D32F2F' : undefined }}/></Field>
             <Field label="Durée *" hint={errors.duration ?? 'mm:ss'}><Input value={editing.duration} onChange={(e) => setEditing({ ...editing, duration: e.target.value })} style={{ borderColor: errors.duration ? '#D32F2F' : undefined }}/></Field>
             <div className="col-span-2">
@@ -356,6 +414,45 @@ export function AdminBienEtre() {
                 <MediaUpload kind="audio" value={editing.audio ?? ''} onChange={(url) => setEditing({ ...editing, audio: url })} />
               </Field>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={!!editingPost} onClose={() => setEditingPost(null)}
+        title={editingPost && wbPosts.some((p) => p.id === editingPost.id) ? 'Modifier le post' : 'Nouveau post'}
+        footer={<><Btn onClick={() => setEditingPost(null)}>Annuler</Btn><Btn variant="primary" onClick={() => {
+          if (!editingPost) return;
+          const title = editingPost.title.trim() || editingPost.body.split('\n')[0]?.trim() || editingPost.author.trim();
+          if (!title) { setPostErrors({ title: 'Auteur ou message requis.' }); show('Champs invalides.', 'error'); return; }
+          const next: WellbeingPost = { ...editingPost, title };
+          const isUpdate = wbPosts.some((p) => p.id === next.id);
+          if (isUpdate) void updatePost(next.id, next); else void createPost(next);
+          setEditingPost(null); setPostErrors({});
+          show(isUpdate ? 'Post mis à jour' : 'Post créé', 'success');
+        }}>Enregistrer</Btn></>}
+      >
+        {editingPost && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2"><Field label="Auteur" hint={postErrors.title}><Input value={editingPost.author} onChange={(e) => setEditingPost({ ...editingPost, author: e.target.value })} /></Field></div>
+            <div className="col-span-2"><Field label="Titre"><Input value={editingPost.title} onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })} /></Field></div>
+            <div className="col-span-2"><Field label="Message"><Textarea rows={5} value={editingPost.body} onChange={(e) => setEditingPost({ ...editingPost, body: e.target.value })} /></Field></div>
+            <Field label="Thème">
+              <select
+                value={editingPost.theme}
+                onChange={(e) => setEditingPost({ ...editingPost, theme: e.target.value as WellbeingTheme })}
+                className="px-3 py-2 bg-white border border-[#EAEAEE] outline-none w-full"
+                style={{ borderRadius: 8, fontSize: '0.82rem' }}
+              >
+                {themes.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Humeur (calme/énergie 1-10)">
+              <div className="flex gap-2">
+                <Input type="number" min={1} max={10} value={editingPost.moodBefore.calm} onChange={(e) => setEditingPost({ ...editingPost, moodBefore: { ...editingPost.moodBefore, calm: Number(e.target.value) } })} />
+                <Input type="number" min={1} max={10} value={editingPost.moodBefore.energy} onChange={(e) => setEditingPost({ ...editingPost, moodBefore: { ...editingPost.moodBefore, energy: Number(e.target.value) } })} />
+              </div>
+            </Field>
           </div>
         )}
       </Modal>

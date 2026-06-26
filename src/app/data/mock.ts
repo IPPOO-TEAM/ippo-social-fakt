@@ -10,8 +10,10 @@ export interface Article {
   readTime: string;
   color: string;
   excerpt: string;
-  section: SectionKey;
+  body?: string;        // Corps de l'article (markdown léger / texte brut multi-paragraphes)
+  section: SectionKey | string; // string pour supporter les sections custom
   premium?: boolean;
+  published?: boolean;  // false = brouillon, non visible côté public
 }
 
 export interface Episode {
@@ -22,9 +24,11 @@ export interface Episode {
   plays: string;
   image: string;
   color: string;
-  section: SectionKey;
+  section: SectionKey | string;
   audio?: string;
+  body?: string;
   premium?: boolean;
+  published?: boolean;
 }
 
 export interface Video {
@@ -33,8 +37,10 @@ export interface Video {
   type: string;
   duration: string;
   image: string;
-  section: SectionKey;
+  section: SectionKey | string;
   video?: string;
+  body?: string;
+  published?: boolean;
 }
 
 export interface Opportunity {
@@ -44,7 +50,8 @@ export interface Opportunity {
   tag: string;
   color: string;
   image: string;
-  section: SectionKey;
+  section: SectionKey | string;
+  published?: boolean;
 }
 
 export const articles: Article[] = [
@@ -570,8 +577,9 @@ export interface Short {
   views: string;
   duration: string;
   image: string;
-  section: SectionKey;
+  section: SectionKey | string;
   video?: string;
+  published?: boolean;
 }
 
 export const shorts: Short[] = [

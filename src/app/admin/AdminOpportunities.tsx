@@ -1,69 +1,121 @@
 import { useState, useMemo } from 'react';
+import { Eye, EyeOff, Plus, Send } from 'lucide-react';
 import { useResource, type Opportunity } from './store';
 import { PageHeader } from './PageHeader';
 import { Toolbar, Table, Field, Input, Select, Modal, Btn, ImageUpload, exportCsv } from './ui';
-import { sections } from '../data/sections';
+import { useAllSections, useTaxonomy, rubricsFor, addRubric } from '../lib/taxonomy';
 import { useAdminToast, ConfirmDialog } from './AdminToast';
 
-const SECTION_OPTIONS = sections.map((s) => ({ value: s.key, label: s.label }));
-const TAGS = ['Bourse', 'Concours', 'Formation', 'Financement', 'Mentorat', 'Incubation', 'Microcrédit', 'Subvention', 'Diaspora'];
 const COLORS = ['#0066FF', '#FF8A00', '#00C853', '#FF3FA4', '#9B51E0', '#E8B21A', '#4A90E2'];
 
 const empty = (): Opportunity => ({
   id: `o${Date.now()}`,
   title: '',
   deadline: '',
-  tag: 'Bourse',
+  tag: '',
   color: '#0066FF',
-  image: 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=600&q=80',
+  image: '',
   section: 'opportunities',
+  published: false,
 });
 
 export function AdminOpportunities() {
-  const { items, create, update, remove, reset } = useResource<Opportunity>('opportunities');
+  const { items, create, update, remove } = useResource<Opportunity>('opportunities');
   const { show } = useAdminToast();
+  const allSections = useAllSections();
+  const SECTION_OPTIONS = useMemo(() => allSections.map((s) => ({ value: s.key, label: s.label })), [allSections]);
+  const { state: taxonomy, commit: commitTaxonomy } = useTaxonomy();
+
   const [search, setSearch] = useState('');
+  const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [errors, setErrors] = useState<Partial<Record<keyof Opportunity, string>>>({});
-  const [resetOpen, setResetOpen] = useState(false);
+  const [newRubric, setNewRubric] = useState('');
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return q ? items.filter((o) => (o.title + o.tag).toLowerCase().includes(q)) : items;
-  }, [items, search]);
+    return items.filter((o) => {
+      if (filterPublished === 'published' && !o.published) return false;
+      if (filterPublished === 'draft' && o.published) return false;
+      if (!q) return true;
+      return (o.title + o.tag).toLowerCase().includes(q);
+    });
+  }, [items, search, filterPublished]);
 
-  const onSave = () => {
+  const onSave = (publish?: boolean) => {
     if (!editing) return;
-    const er: Partial<Record<keyof Opportunity, string>> = {};
-    if (!editing.title.trim()) er.title = 'Le titre est requis.';
-    if (!editing.deadline.trim()) er.deadline = "L'échéance est requise.";
-    setErrors(er);
-    if (Object.keys(er).length > 0) { show('Champs invalides.', 'error'); return; }
-    const isUpdate = items.some((a) => a.id === editing.id);
-    if (isUpdate) update(editing.id, editing);
-    else create(editing);
+    if (!editing.title.trim()) {
+      setErrors({ title: 'Le titre est requis.' });
+      show('Le titre est requis.', 'error');
+      return;
+    }
+    const filled: Opportunity = {
+      ...editing,
+      published: typeof publish === 'boolean' ? publish : (editing.published ?? false),
+    };
+    const isUpdate = items.some((a) => a.id === filled.id);
+    if (isUpdate) update(filled.id, filled);
+    else create(filled);
     setEditing(null);
     setErrors({});
-    show(isUpdate ? 'Opportunité mise à jour' : 'Opportunité créée', 'success');
+    show(
+      isUpdate
+        ? (filled.published ? 'Opportunité mise à jour et publiée' : 'Brouillon mis à jour')
+        : (filled.published ? 'Opportunité publiée' : 'Brouillon enregistré'),
+      'success',
+    );
+  };
+
+  const sectionRubrics = editing ? rubricsFor(taxonomy, String(editing.section)) : [];
+
+  const addNewRubric = () => {
+    if (!editing || !newRubric.trim()) return;
+    commitTaxonomy(addRubric(taxonomy, String(editing.section), newRubric));
+    setEditing({ ...editing, tag: newRubric.trim() });
+    setNewRubric('');
   };
 
   return (
     <>
-      <PageHeader title="Opportunités" subtitle={`${items.length} opportunités`} />
+      <PageHeader
+        title="Opportunités"
+        subtitle={`${items.length} opportunité${items.length > 1 ? 's' : ''} · ${items.filter((a) => a.published).length} publiée${items.filter((a) => a.published).length > 1 ? 's' : ''}`}
+      />
       <div className="p-8">
         <Toolbar
           search={search} onSearch={setSearch}
-          onCreate={() => { setEditing(empty()); setErrors({}); }}
-          onReset={() => setResetOpen(true)}
+          onCreate={() => { setEditing(empty()); setErrors({}); setNewRubric(''); }}
           onExport={() => exportCsv('opportunites', filtered, [
             { key: 'id', label: 'ID' },
             { key: 'title', label: 'Titre' },
             { key: 'tag', label: 'Catégorie' },
             { key: 'deadline', label: 'Échéance' },
             { key: 'section', label: 'Section' },
+            { key: 'published', label: 'Publié' },
           ])}
           createLabel="Nouvelle opportunité"
         />
+
+        <div className="flex items-center gap-2 mb-4">
+          {(['all', 'published', 'draft'] as const).map((k) => {
+            const active = filterPublished === k;
+            return (
+              <button
+                key={k}
+                onClick={() => setFilterPublished(k)}
+                className="px-3 py-1.5"
+                style={{
+                  background: active ? '#1a1a1a' : '#F4F4F6',
+                  color: active ? 'white' : '#717182',
+                  fontSize: '0.78rem', fontWeight: 600, borderRadius: 999,
+                }}
+              >
+                {k === 'all' ? `Tous (${items.length})` : k === 'published' ? `Publiés (${items.filter((a) => a.published).length})` : `Brouillons (${items.filter((a) => !a.published).length})`}
+              </button>
+            );
+          })}
+        </div>
+
         <Table<Opportunity>
           rows={filtered}
           columns={[
@@ -72,37 +124,88 @@ export function AdminOpportunities() {
               render: (o) => (
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 flex-shrink-0 overflow-hidden bg-[#F0F0F4]" style={{ borderRadius: 6 }}>
-                    <img src={o.image} alt="" className="w-full h-full object-cover" />
+                    {o.image ? <img src={o.image} alt="" className="w-full h-full object-cover" /> : null}
                   </div>
-                  <div className="line-clamp-1" style={{ fontWeight: 600 }}>{o.title}</div>
+                  <div className="min-w-0">
+                    <div className="line-clamp-1 flex items-center gap-2" style={{ fontWeight: 600 }}>
+                      {o.title || <span className="text-[#717182] italic">(sans titre)</span>}
+                      {o.published ? null : <span className="px-1.5 py-0.5 bg-[#FFF3E0] text-[#FF8A00]" style={{ fontSize: '0.62rem', fontWeight: 700, borderRadius: 4 }}>BROUILLON</span>}
+                    </div>
+                  </div>
                 </div>
               ),
             },
             {
               key: 'tag', label: 'Catégorie',
-              render: (o) => <span className="px-2 py-0.5 text-white" style={{ background: o.color, fontSize: '0.7rem', fontWeight: 600, borderRadius: 4 }}>{o.tag}</span>,
+              render: (o) => o.tag ? <span className="px-2 py-0.5 text-white" style={{ background: o.color, fontSize: '0.7rem', fontWeight: 600, borderRadius: 4 }}>{o.tag}</span> : <span className="text-[#717182]">—</span>,
               width: '140px',
             },
-            { key: 'deadline', label: 'Échéance', render: (o) => o.deadline, width: '110px' },
-            { key: 'section', label: 'Section', render: (o) => o.section, width: '120px' },
+            { key: 'deadline', label: 'Échéance', render: (o) => o.deadline || '—', width: '110px' },
+            { key: 'section', label: 'Section', render: (o) => String(o.section), width: '120px' },
           ]}
-          onEdit={(o) => { setEditing(o); setErrors({}); }}
+          onEdit={(o) => { setEditing(o); setErrors({}); setNewRubric(''); }}
           onDelete={(o) => { remove(o.id); show('Opportunité supprimée', 'info'); }}
-          deleteLabel={(o) => `« ${o.title} »`}
+          deleteLabel={(o) => `« ${o.title || 'sans titre'} »`}
         />
       </div>
 
       <Modal
         open={!!editing} onClose={() => setEditing(null)}
         title={editing && items.some((a) => a.id === editing.id) ? 'Modifier l\'opportunité' : 'Nouvelle opportunité'}
-        footer={<><Btn onClick={() => setEditing(null)}>Annuler</Btn><Btn variant="primary" onClick={onSave}>Enregistrer</Btn></>}
+        footer={
+          <>
+            <Btn onClick={() => setEditing(null)}>Annuler</Btn>
+            <Btn onClick={() => onSave(false)}>Enregistrer en brouillon</Btn>
+            <Btn variant="primary" onClick={() => onSave(true)}><Send size={13}/> {editing?.published ? 'Mettre à jour' : 'Publier maintenant'}</Btn>
+          </>
+        }
       >
         {editing && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} maxLength={160} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
-            <Field label="Catégorie"><Select value={editing.tag} onChange={(v) => setEditing({ ...editing, tag: v })} options={TAGS.map((t) => ({ value: t, label: t }))} /></Field>
-            <Field label="Échéance *" hint={errors.deadline ?? 'ex. 30 juin 2026'}><Input value={editing.deadline} onChange={(e) => setEditing({ ...editing, deadline: e.target.value })} style={{ borderColor: errors.deadline ? '#D32F2F' : undefined }}/></Field>
-            <Field label="Section"><Select value={editing.section} onChange={(v) => setEditing({ ...editing, section: v as Opportunity['section'] })} options={SECTION_OPTIONS} /></Field>
+            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
+
+            <div className="col-span-2 -mb-2">
+              <div className="flex items-center gap-3 px-3 py-2.5 bg-[#FAFAFA]" style={{ borderRadius: 10 }}>
+                {editing.published ? <Eye size={14} className="text-[#00A03B]"/> : <EyeOff size={14} className="text-[#FF8A00]"/>}
+                <div className="flex-1" style={{ fontSize: '0.82rem', color: '#1a1a1a', fontWeight: 600 }}>
+                  {editing.published ? 'Publié — visible par tous les utilisateurs' : 'Brouillon — invisible côté public'}
+                </div>
+                <button
+                  onClick={() => setEditing({ ...editing, published: !editing.published })}
+                  className="px-3 py-1.5"
+                  style={{ background: editing.published ? '#FFF3E0' : '#E4F7E9', color: editing.published ? '#FF8A00' : '#00A03B', fontSize: '0.74rem', fontWeight: 700, borderRadius: 999 }}
+                >
+                  {editing.published ? 'Repasser en brouillon' : 'Marquer prêt à publier'}
+                </button>
+              </div>
+            </div>
+
+            <Field label="Section">
+              <Select value={String(editing.section)} onChange={(v) => setEditing({ ...editing, section: v, tag: '' })} options={SECTION_OPTIONS} />
+            </Field>
+
+            <div>
+              <Field label="Catégorie / Rubrique" hint={`${sectionRubrics.length} rubrique${sectionRubrics.length > 1 ? 's' : ''} disponible${sectionRubrics.length > 1 ? 's' : ''}`}>
+                <Select
+                  value={editing.tag}
+                  onChange={(v) => setEditing({ ...editing, tag: v })}
+                  options={[{ value: '', label: '— Choisir —' }, ...sectionRubrics.map((r) => ({ value: r, label: r }))]}
+                />
+              </Field>
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  value={newRubric}
+                  onChange={(e) => setNewRubric(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNewRubric(); } }}
+                  placeholder="…ou créer une nouvelle rubrique"
+                  className="flex-1 px-3 py-2 bg-white border border-[#EAEAEE] focus:border-[#0066FF] outline-none"
+                  style={{ borderRadius: 8, fontSize: '0.78rem' }}
+                />
+                <Btn onClick={addNewRubric}><Plus size={12}/> Créer</Btn>
+              </div>
+            </div>
+
+            <Field label="Échéance" hint="ex. 30 juin 2026"><Input value={editing.deadline} onChange={(e) => setEditing({ ...editing, deadline: e.target.value })}/></Field>
             <Field label="Couleur">
               <div className="flex gap-1.5 flex-wrap">
                 {COLORS.map((c) => (
@@ -110,22 +213,33 @@ export function AdminOpportunities() {
                 ))}
               </div>
             </Field>
+
             <div className="col-span-2">
               <Field label="Image"><ImageUpload value={editing.image} onChange={(url) => setEditing({ ...editing, image: url })} aspect="16/9" /></Field>
+            </div>
+
+            <div className="col-span-2">
+              <div className="text-[#717182] mb-2" style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em' }}>APERÇU</div>
+              <div className="bg-white border border-[#EAEAEE] overflow-hidden" style={{ borderRadius: 12 }}>
+                <div className="aspect-video bg-[#F0F0F4]">
+                  {editing.image ? <img src={editing.image} alt="" className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-[#9A9AA8]" style={{ fontSize: '0.82rem' }}>Aucune image</div>}
+                </div>
+                <div className="p-4">
+                  <div className="inline-block px-2 py-0.5 mb-2" style={{ background: editing.color, color: 'white', fontSize: '0.64rem', fontWeight: 700, letterSpacing: '0.1em', borderRadius: 4 }}>
+                    {(editing.tag || 'CATÉGORIE').toUpperCase()}
+                  </div>
+                  <div style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#1a1a1a', lineHeight: 1.2 }}>
+                    {editing.title || <span className="text-[#9A9AA8]">Titre de l'opportunité</span>}
+                  </div>
+                  {editing.deadline && <div className="mt-2 text-[#717182]" style={{ fontSize: '0.72rem' }}>Échéance · {editing.deadline}</div>}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </Modal>
-
-      <ConfirmDialog
-        open={resetOpen}
-        title="Restaurer les données initiales ?"
-        message="Vos modifications locales seront remplacées par le jeu d'opportunités d'exemple."
-        confirmLabel="Restaurer"
-        danger
-        onCancel={() => setResetOpen(false)}
-        onConfirm={() => { reset(); setResetOpen(false); show('Opportunités réinitialisées', 'info'); }}
-      />
     </>
   );
 }
+
+void ConfirmDialog;

@@ -288,7 +288,8 @@ export async function completePasswordReset(newPassword: string) {
 export type Resource =
   | "article" | "episode" | "video" | "short" | "opportunity" | "dossier"
   | "price" | "program" | "page" | "theme" | "push"
-  | "wb_post" | "wb_post_reply" | "wb_music" | "wb_track";
+  | "wb_post" | "wb_post_reply" | "wb_music" | "wb_track"
+  | "ad";
 
 export async function listContent<T = unknown>(resource: Resource, opts: { limit?: number; offset?: number } = {}): Promise<T[]> {
   // Default to the server's max page size so existing callers (which assume
@@ -388,23 +389,81 @@ export async function uploadFile(path: string, file: Blob | File) {
 }
 // Admin-only: upload a media asset to the public CMS bucket. Returns a
 // permanent public URL safe to store on content rows (no signing needed).
-export async function uploadPublicMedia(file: Blob | File): Promise<{ path: string; url: string; kind: string }> {
-  const token = await getAccessToken();
+// When `onProgress` is provided, uses XHR to report real upload progress
+// (0→1); otherwise falls back to fetch.
+// Marks an Error as a transient network failure so withRetry knows it's safe
+// to retry. HTTP errors (4xx/5xx) deliberately omit this flag and fail fast.
+class UploadNetworkError extends Error {
+  readonly isNetwork = true;
+  constructor(message: string) { super(message); this.name = 'UploadNetworkError'; }
+}
+
+async function withRetry<T>(attempt: () => Promise<T>): Promise<T> {
+  const delays = [500, 1500];
+  let lastErr: unknown;
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await attempt();
+    } catch (e) {
+      lastErr = e;
+      const networky = (e as { isNetwork?: boolean })?.isNetwork === true || (e instanceof TypeError);
+      if (!networky || i === 2) throw e;
+      await new Promise((r) => setTimeout(r, delays[i]));
+    }
+  }
+  throw lastErr;
+}
+
+export async function uploadPublicMedia(
+  file: Blob | File,
+  onProgress?: (fraction: number) => void,
+): Promise<{ path: string; url: string; kind: string }> {
   const ext = (file as File).name?.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ?? "";
   const qs = ext ? `?ext=${encodeURIComponent(ext)}` : "";
-  const res = await fetch(`${SERVER_BASE}/storage/upload-public${qs}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": file.type || "application/octet-stream",
-      Authorization: `Bearer ${token}`,
-    },
-    body: file,
+  const url = `${SERVER_BASE}/storage/upload-public${qs}`;
+  const contentType = file.type || "application/octet-stream";
+
+  return withRetry(async () => {
+    if (onProgress) onProgress(0);
+    const token = await getAccessToken();
+
+    if (onProgress) {
+      return new Promise<{ path: string; url: string; kind: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", url, true);
+        xhr.setRequestHeader("Content-Type", contentType);
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.min(0.99, e.loaded / e.total));
+        };
+        xhr.onload = () => {
+          let data: any;
+          try { data = xhr.responseText ? JSON.parse(xhr.responseText) : {}; } catch { data = { raw: xhr.responseText }; }
+          if (xhr.status >= 200 && xhr.status < 300) { onProgress(1); resolve(data); }
+          else reject(new Error(data?.error ?? `Upload failed: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new UploadNetworkError("Échec réseau pendant l'upload"));
+        xhr.send(file);
+      });
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": contentType, Authorization: `Bearer ${token}` },
+        body: file,
+      });
+    } catch (e) {
+      // fetch() rejects with TypeError on true network failure — surface as retryable.
+      throw new UploadNetworkError(e instanceof Error ? e.message : 'Network failure');
+    }
+    const text = await res.text();
+    let data: any;
+    try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+    if (!res.ok) throw new Error(data?.error ?? `Upload failed: ${res.status}`);
+    return data as { path: string; url: string; kind: string };
   });
-  const text = await res.text();
-  let data: any;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
-  if (!res.ok) throw new Error(data?.error ?? `Upload failed: ${res.status}`);
-  return data as { path: string; url: string; kind: string };
 }
 
 export async function signedReadUrl(path: string) {
@@ -414,7 +473,7 @@ export async function signedReadUrl(path: string) {
 
 // ============== NOTIFICATIONS ==============
 export async function sendPushNotification(payload: { title: string; body: string; url?: string; iconKey?: string; color?: string; userId?: string }) {
-  return api<{ ok: boolean; sent: number; failed: number; pruned: number }>(
+  return api<{ ok: boolean; inbox: number; sent: number; failed: number; pruned: number }>(
     "/notifications/send", { method: "POST", body: payload },
   );
 }

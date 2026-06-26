@@ -75,10 +75,6 @@ export function AdminPages() {
     if (!editing) return;
     const er: Partial<Record<keyof StaticPage, string>> = {};
     if (!editing.title.trim()) er.title = 'Titre requis.';
-    if (!editing.slug.trim()) er.slug = 'Slug requis.';
-    if (!/^[a-z0-9-]+$/.test(editing.slug)) er.slug = 'Lettres minuscules, chiffres et tirets uniquement.';
-    if (items.some((p) => p.slug === editing.slug && p.id !== editing.id)) er.slug = 'Slug déjà utilisé.';
-    if (!editing.body.trim()) er.body = 'Contenu requis.';
     setErrors(er);
     if (Object.keys(er).length > 0) { show('Champs invalides.', 'error'); return; }
     const next = { ...editing, updatedAt: Date.now() };
@@ -150,8 +146,8 @@ export function AdminPages() {
       >
         {editing && (
           <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} maxLength={120} onChange={(e) => setEditing({ ...editing, title: e.target.value, slug: editing.slug || slugify(e.target.value) })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
-            <div className="col-span-2"><Field label="Slug (URL) *" hint={errors.slug ?? `accessible via /pages/${editing.slug || '...'}`}><Input value={editing.slug} maxLength={60} onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })} style={{ borderColor: errors.slug ? '#D32F2F' : undefined }}/></Field></div>
+            <div className="col-span-2"><Field label="Titre *" hint={errors.title}><Input value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value, slug: editing.slug || slugify(e.target.value) })} style={{ borderColor: errors.title ? '#D32F2F' : undefined }}/></Field></div>
+            <div className="col-span-2"><Field label="Slug (URL) *" hint={errors.slug ?? `accessible via /pages/${editing.slug || '...'}`}><Input value={editing.slug} onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })} style={{ borderColor: errors.slug ? '#D32F2F' : undefined }}/></Field></div>
             <Field label="Statut">
               <button type="button" onClick={() => setEditing({ ...editing, published: !editing.published })} className="px-3 py-2 w-full" style={{
                 background: editing.published ? '#E4F7E9' : '#F2F2F5',

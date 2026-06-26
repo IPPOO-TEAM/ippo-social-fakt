@@ -9,7 +9,7 @@ import {
 } from '../../data/wellbeing';
 import { useWellbeing, useMoodLog } from '../../lib/wellbeing-store';
 import { useResolvedThemes, useResolvedThemeMap } from '../../lib/admin-overrides';
-import { useResource } from '../../admin/store';
+import { useLiveContent } from '../../lib/live-content';
 
 interface Props {
   onBack: () => void;
@@ -173,8 +173,10 @@ function ComposerModal({ open, onClose, onSubmit }: {
 
 export function BienEtreView({ onBack, onOpenPost }: Props) {
   const toast = useToast();
-  const { posts, addPost, responsesFor } = useWellbeing();
-  const { items: tracks } = useResource<MusicTrack>('tracks');
+  // Lecture 100% serveur (pas de seeds en production).
+  const { items: posts } = useLiveContent<WellbeingPost>('wb_post');
+  const { addPost, responsesFor } = useWellbeing();
+  const { items: tracks } = useLiveContent<MusicTrack>('wb_track');
   const { entries, log } = useMoodLog();
   const themes = useResolvedThemes().filter((t) => !t.hidden);
   const themeMap = useResolvedThemeMap();

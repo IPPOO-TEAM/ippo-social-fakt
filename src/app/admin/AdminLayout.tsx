@@ -1,6 +1,6 @@
 import { NavLink, Outlet, Navigate, useNavigate } from 'react-router';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Mic, Video as VideoIcon, Briefcase, FolderOpen, Users, Settings, LogOut, Shield, LineChart, Heart, Clock, Radio, Layers, BookOpen, Palette, Bell, CreditCard, Zap, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, FileText, Mic, Video as VideoIcon, Briefcase, FolderOpen, Users, Settings, LogOut, Shield, LineChart, Heart, Clock, Radio, Layers, BookOpen, Palette, Bell, CreditCard, Zap, MessageSquare, Megaphone } from 'lucide-react';
 import { useAdminAuth } from './auth';
 import { AdminToastProvider, useAdminToast, ConfirmDialog } from './AdminToast';
 
@@ -17,6 +17,7 @@ const NAV: { to: string; icon: typeof LayoutDashboard; label: string; end?: bool
   { to: '/admin/programs', icon: Radio, label: 'Grille radio' },
   { to: '/admin/moderation', icon: MessageSquare, label: 'Modération' },
   { to: '/admin/push', icon: Bell, label: 'Notifications push' },
+  { to: '/admin/ads', icon: Megaphone, label: 'Carrousel publicitaire' },
   { to: '/admin/subscriptions', icon: CreditCard, label: 'Abonnements' },
   { to: '/admin/pages', icon: BookOpen, label: 'Pages statiques' },
   { to: '/admin/themes', icon: Palette, label: 'Thèmes Bien-Être', roles: ['admin'] },
