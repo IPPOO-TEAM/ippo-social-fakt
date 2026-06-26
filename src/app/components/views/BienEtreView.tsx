@@ -10,6 +10,7 @@ import {
 import { useWellbeing, useMoodLog } from '../../lib/wellbeing-store';
 import { useResolvedThemes, useResolvedThemeMap } from '../../lib/admin-overrides';
 import { useLiveContent } from '../../lib/live-content';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 
 interface Props {
   onBack: () => void;
@@ -327,8 +328,11 @@ export function BienEtreView({ onBack, onOpenPost }: Props) {
               ? ((p.moodAfter.calm + p.moodAfter.energy) / 2) - ((p.moodBefore.calm + p.moodBefore.energy) / 2)
               : null;
             return (
+              <div key={p.id} className="relative">
+              <div className="absolute top-3 right-3 z-10">
+                <AdminQuickDelete resource="wb_post" id={p.id} label={`La publication « ${p.title} »`} />
+              </div>
               <button
-                key={p.id}
                 onClick={() => onOpenPost(p.id)}
                 className="w-full text-left bg-white border border-[#F0F0F0] hover:border-[#0066FF]/40 transition-colors overflow-hidden"
                 style={{ borderRadius: 14 }}
@@ -381,6 +385,7 @@ export function BienEtreView({ onBack, onOpenPost }: Props) {
                   </div>
                 </div>
               </button>
+              </div>
             );
           })}
         </div>

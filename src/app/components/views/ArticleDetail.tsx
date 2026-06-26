@@ -1,5 +1,6 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { ChevronLeft, Share2, Bookmark, MapPin, Clock } from 'lucide-react';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useFavorites, useHistory, useViewCount } from '../../lib/storage';
@@ -79,6 +80,7 @@ export function ArticleDetail({ article, onBack }: Props) {
  >
  <Bookmark size={17} className={saved ? 'text-white fill-white' : 'text-[#1a1a1a]'} />
  </button>
+ <AdminQuickDelete resource="article" id={article.id} label={`L'article « ${article.title} »`} onDeleted={onBack} />
  </div>
  </div>
 

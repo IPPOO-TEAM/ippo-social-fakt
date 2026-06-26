@@ -4,6 +4,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { ChevronLeft, Heart, MessageCircle, Share2, Music2, Play, Pause, Volume2, VolumeX, Zap, Bookmark, Send, X } from 'lucide-react';
 import type { Short } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import { useContentT } from '../../data/mock_translations';
 import { useReactions, useFavorites, useComments } from '../../lib/storage';
 import { toast } from 'sonner';
@@ -256,6 +257,7 @@ export function ShortsView() {
                     Share
                   </span>
                 </button>
+                <AdminQuickDelete resource="short" id={s.id} label={`Le short « ${s.title} »`} />
                 <div className="w-12 h-12 flex items-center justify-center" style={{ borderRadius: 999, background: 'linear-gradient(135deg, #1a1a1a, #444)', border: '2px solid rgba(255,255,255,0.4)', animation: active && !paused ? 'spin 6s linear infinite' : undefined }}>
                   <Music2 size={18} className="text-white" />
                 </div>

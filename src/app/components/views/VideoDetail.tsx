@@ -3,6 +3,7 @@ import { ChevronDown, Play, Pause, Share2, Bookmark, Eye, Volume2, VolumeX, Maxi
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { useFavorites, useHistory, useComments, useViewCount } from '../../lib/storage';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import { Comments } from '../Comments';
 import { useT } from '../../lib/i18n';
 import { useContentT } from '../../data/mock_translations';
@@ -106,6 +107,10 @@ export function VideoDetail({ video, onClose }: Props) {
  <button onClick={onClose} className="absolute top-4 left-4 w-10 h-10 bg-black/50 backdrop-blur flex items-center justify-center text-white" aria-label={t('common.close')}>
  <ChevronDown size={20} />
  </button>
+
+ <div className="absolute top-4 right-4">
+ <AdminQuickDelete resource="video" id={video.id} label={`La vidéo « ${video.title} »`} onDeleted={onClose} />
+ </div>
 
  <button
  onClick={togglePlay}

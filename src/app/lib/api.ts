@@ -423,6 +423,10 @@ export async function uploadPublicMedia(
   const url = `${SERVER_BASE}/storage/upload-public${qs}`;
   const contentType = file.type || "application/octet-stream";
 
+  // L'endpoint d'upload est protégé par requireAdmin → il EXIGE le jeton admin
+  // (X-Admin-Token), pas le Bearer Supabase. Sans lui : "Admin non autorisé".
+  const adminToken = getAdminToken();
+
   return withRetry(async () => {
     if (onProgress) onProgress(0);
     const token = await getAccessToken();
@@ -433,6 +437,7 @@ export async function uploadPublicMedia(
         xhr.open("POST", url, true);
         xhr.setRequestHeader("Content-Type", contentType);
         xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+        if (adminToken) xhr.setRequestHeader("X-Admin-Token", adminToken);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) onProgress(Math.min(0.99, e.loaded / e.total));
         };
@@ -451,7 +456,11 @@ export async function uploadPublicMedia(
     try {
       res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": contentType, Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": contentType,
+          Authorization: `Bearer ${token}`,
+          ...(adminToken ? { "X-Admin-Token": adminToken } : {}),
+        },
         body: file,
       });
     } catch (e) {

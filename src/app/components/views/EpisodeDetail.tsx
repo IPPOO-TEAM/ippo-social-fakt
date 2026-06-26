@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { useFavorites, useHistory, useViewCount } from '../../lib/storage';
 import { type Episode } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import type { PlayingTrack } from '../MiniPlayer';
 import { useT } from '../../lib/i18n';
 import { useContentT } from '../../data/mock_translations';
@@ -102,9 +103,12 @@ export function EpisodeDetail({ track, playing, onToggle, onClose }: Props) {
  {trackShow}
  </div>
  </div>
+ <div className="flex items-center gap-2">
+ <AdminQuickDelete resource="episode" id={track.id} label={`L'épisode « ${track.title} »`} onDeleted={onClose} />
  <button onClick={() => setQueueOpen((v) => !v)} className="w-10 h-10 bg-white/10 backdrop-blur flex items-center justify-center" aria-label={t('player.queue')}>
  <ListMusic size={18} />
  </button>
+ </div>
  </div>
 
  <div className="flex-1 flex items-center justify-center my-6">

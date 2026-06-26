@@ -1,18 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type SyntheticEvent } from 'react';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useLiveContent } from '../lib/live-content';
 import type { Ad } from '../admin/AdminAds';
+import { DEFAULT_ADS } from '../data/default-ads';
 
 export function AdCarousel() {
-  // Server-only : les encarts proviennent de la table publique (resource `ad`).
-  // Seuls les éléments `published === true` sont affichés.
+  // Les encarts proviennent de la table publique (resource `ad`). Tant
+  // qu'aucun encart n'a été publié côté serveur, on affiche le jeu par défaut
+  // (synchronisable/éditable depuis /admin/ads).
   const { items: rawAds } = useLiveContent<Ad>('ad');
-  const ads = rawAds
+  const serverAds = rawAds
     .filter((a) => a && a.published && (a.image || a.title))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  const ads = serverAds.length > 0 ? serverAds : DEFAULT_ADS;
 
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  // Ratio (largeur/hauteur) mesuré par image → le conteneur s'adapte à la
+  // taille réelle de l'image active (pas de recadrage forcé).
+  const [ratios, setRatios] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (paused || ads.length < 2) return;
@@ -34,6 +40,10 @@ export function AdCarousel() {
     else window.location.href = a.url;
   };
 
+  const activeAd = ads[Math.min(index, ads.length - 1)];
+  // Le viewport prend le ratio de l'image active (repli 16/9 avant mesure).
+  const activeRatio = (activeAd && ratios[activeAd.id]) || 16 / 9;
+
   return (
     <section
       className="px-5 mt-6"
@@ -51,9 +61,12 @@ export function AdCarousel() {
         </span>
       </div>
 
-      <div className="relative overflow-hidden" style={{ borderRadius: 'var(--r-lg)', boxShadow: '0 10px 28px -18px rgba(0,0,0,0.30)' }}>
+      <div
+        className="relative overflow-hidden transition-[aspect-ratio] duration-500 ease-out"
+        style={{ borderRadius: 'var(--r-lg)', boxShadow: '0 10px 28px -18px rgba(0,0,0,0.30)', aspectRatio: String(activeRatio) }}
+      >
         <div
-          className="flex transition-transform duration-500 ease-out"
+          className="flex h-full transition-transform duration-500 ease-out"
           style={{ transform: `translateX(-${index * 100}%)` }}
         >
           {ads.map((a) => (
@@ -61,10 +74,21 @@ export function AdCarousel() {
               key={a.id}
               type="button"
               onClick={() => onAdClick(a)}
-              className="relative flex-shrink-0 w-full aspect-[16/9] text-left"
+              className="relative flex-shrink-0 w-full h-full text-left"
             >
               {a.image && (
-                <ImageWithFallback src={a.image} alt={a.brand} className="absolute inset-0 w-full h-full object-cover"/>
+                <ImageWithFallback
+                  src={a.image}
+                  alt={a.brand}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onLoad={(e: SyntheticEvent<HTMLImageElement>) => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth && img.naturalHeight) {
+                      const r = img.naturalWidth / img.naturalHeight;
+                      setRatios((prev) => (prev[a.id] === r ? prev : { ...prev, [a.id]: r }));
+                    }
+                  }}
+                />
               )}
               <div className="absolute inset-0" style={{ background: `linear-gradient(100deg, ${a.tone}E6 0%, ${a.tone}80 45%, transparent 75%)` }}/>
               <div className="absolute inset-0 px-5 py-4 flex flex-col justify-between text-white">

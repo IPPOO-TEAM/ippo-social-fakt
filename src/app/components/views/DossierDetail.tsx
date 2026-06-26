@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ChevronLeft, BookOpen, Mic, Video, ChevronRight, Share2 } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import { type Article, type Episode, type Video as VideoT } from '../../data/mock';
 import { useLiveContent } from '../../lib/live-content';
 import type { PlayingTrack } from '../MiniPlayer';
@@ -63,6 +64,9 @@ export function DossierDetail({ dossier, onClose, onOpenArticle, onOpenVideo, on
         }} className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur flex items-center justify-center" aria-label={t('common.share')}>
           <Share2 size={18} />
         </button>
+        <div className="absolute top-16 right-4">
+          <AdminQuickDelete resource="dossier" id={dossier.id} label={`Le dossier « ${dossier.title} »`} onDeleted={onClose} />
+        </div>
         <div className="absolute bottom-5 left-5 right-5 text-white">
           <span className="inline-block px-2.5 py-1 mb-2" style={{ background: dossier.color, fontFamily: 'Inter, sans-serif', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em' }}>
             {t('dossier.label')}

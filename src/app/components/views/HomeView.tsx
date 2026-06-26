@@ -91,6 +91,46 @@ export function HomeView({ onPlay, onOpenArticle, onOpenSection, onOpenOpportuni
 
       <AdCarousel/>
 
+      {/* Actualités — bandeau horizontal juste sous le carrousel (server-only) */}
+      {articles.length > 0 && (
+        <section className="mt-6">
+          <div className="px-5 flex items-end justify-between mb-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0066FF]"/>
+              <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.1rem', color: '#1a1a1a', letterSpacing: '-0.01em' }}>
+                Actualités
+              </h3>
+            </div>
+            <button onClick={() => onOpenSection?.('actu')} className="flex items-center gap-1 text-[#0066FF]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.78rem', fontWeight: 600 }}>
+              {t('common.see_all')} <ArrowRight size={13}/>
+            </button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-5 pb-2 scrollbar-hide">
+            {articles.slice(0, 8).map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onOpenArticle(a)}
+                className="flex-shrink-0 w-60 text-left transition-transform hover:-translate-y-0.5"
+              >
+                <div className="relative w-full aspect-[16/10] overflow-hidden mb-2" style={{ borderRadius: 'var(--r-md)' }}>
+                  <ImageWithFallback src={optimizedUnsplash(a.image, 600, 65)} alt={a.title} className="w-full h-full object-cover" loading="lazy" decoding="async"/>
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.7) 100%)' }}/>
+                  <span className="absolute top-2 left-2 px-2 py-0.5 text-white" style={{ background: a.color ?? '#0066FF', fontFamily: 'Inter, sans-serif', fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.1em', borderRadius: 999 }}>
+                    {tc.article(a.id, 'category', a.category).toUpperCase()}
+                  </span>
+                </div>
+                <div className="line-clamp-2" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 700, fontSize: '0.88rem', color: '#1a1a1a', lineHeight: 1.3, letterSpacing: '-0.01em' }}>
+                  {tc.article(a.id, 'title', a.title)}
+                </div>
+                <div className="text-[#717182] mt-0.5" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem' }}>
+                  {tc.article(a.id, 'date', a.date)} · {tc.article(a.id, 'readTime', a.readTime)}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Pill tabs */}
       <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md mt-4">
         <div className="flex gap-2 overflow-x-auto px-5 py-3 scrollbar-hide">

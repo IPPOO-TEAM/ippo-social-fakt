@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { ChevronLeft, Calendar, MapPin, Bookmark, Share2, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { AdminQuickDelete } from '../AdminQuickDelete';
 import { useFavorites, useHistory } from '../../lib/storage';
 import type { Opportunity } from '../../data/mock';
 import { useT } from '../../lib/i18n';
@@ -59,9 +60,12 @@ export function OpportunityDetail({ opportunity: o, onClose }: Props) {
         <button onClick={onClose} className="absolute top-4 left-4 w-10 h-10 bg-white/90 backdrop-blur flex items-center justify-center" aria-label={t('common.back')}>
           <ChevronLeft size={20} />
         </button>
-        <button onClick={onShare} className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur flex items-center justify-center" aria-label={t('common.share')}>
-          <Share2 size={18} />
-        </button>
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <AdminQuickDelete resource="opportunity" id={o.id} label={`L'opportunité « ${o.title} »`} onDeleted={onClose} />
+          <button onClick={onShare} className="w-10 h-10 bg-white/90 backdrop-blur flex items-center justify-center" aria-label={t('common.share')}>
+            <Share2 size={18} />
+          </button>
+        </div>
         <div className="absolute bottom-4 left-4 right-4 text-white">
           <span className="inline-block px-2.5 py-1 mb-2 text-white" style={{ background: o.color, fontFamily: 'Inter, sans-serif', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em' }}>
             {oTag.toUpperCase()}

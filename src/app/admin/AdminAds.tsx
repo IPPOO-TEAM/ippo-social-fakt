@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Send, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
+import { Send, Eye, EyeOff, Image as ImageIcon, DownloadCloud } from 'lucide-react';
 import { useResource } from './store';
 import { PageHeader } from './PageHeader';
 import { Toolbar, Table, Field, Input, Modal, Btn, ImageUpload, exportCsv } from './ui';
 import { useAdminToast } from './AdminToast';
+import { DEFAULT_ADS } from '../data/default-ads';
 
 export interface Ad {
   id: string;
@@ -49,6 +50,27 @@ export function AdminAds() {
     }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [items, search, filterPublished]);
 
+  const [seeding, setSeeding] = useState(false);
+  // Pousse les encarts par défaut (images de marque + accroches) vers le
+  // serveur. N'ajoute que ceux absents (par id) → idempotent, non destructif.
+  const seedDefaults = async () => {
+    if (seeding) return;
+    setSeeding(true);
+    try {
+      const existing = new Set(items.map((a) => a.id));
+      const missing = DEFAULT_ADS.filter((a) => !existing.has(a.id));
+      if (missing.length === 0) { show('Encarts par défaut déjà synchronisés.', 'info'); return; }
+      for (const ad of missing) {
+        await create({ ...ad });
+      }
+      show(`${missing.length} encart(s) par défaut synchronisé(s) et publié(s).`, 'success');
+    } catch (e) {
+      show(`Échec de la synchronisation : ${e instanceof Error ? e.message : String(e)}`, 'error');
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const onSave = (publish?: boolean) => {
     if (!editing) return;
     const er: { brand?: string; title?: string } = {};
@@ -87,7 +109,8 @@ export function AdminAds() {
           createLabel="Nouvelle publicité"
         />
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
           {(['all', 'published', 'draft'] as const).map((k) => {
             const active = filterPublished === k;
             return (
@@ -99,6 +122,10 @@ export function AdminAds() {
               </button>
             );
           })}
+          </div>
+          <Btn onClick={seedDefaults} disabled={seeding}>
+            <DownloadCloud size={13} /> {seeding ? 'Synchronisation…' : 'Synchroniser les encarts par défaut'}
+          </Btn>
         </div>
 
         <Table<Ad>
