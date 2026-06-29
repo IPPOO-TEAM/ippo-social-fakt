@@ -8,6 +8,9 @@ import { PageHeader } from './PageHeader';
 import { useWellbeing } from '../lib/wellbeing-store';
 import { seedContent, type Resource } from '../lib/api';
 import * as Mock from '../data/mock';
+import { seedPrograms } from '../data/programs';
+import { dossiersData as seedDossiers } from '../components/views/ActuView';
+import { musicTracks as seedTracks } from '../data/wellbeing';
 import { useToast } from '../components/Toast';
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -175,8 +178,12 @@ export function Dashboard() {
       { resource: 'article',     items: Mock.articles ?? [] },
       { resource: 'episode',     items: Mock.episodes ?? [] },
       { resource: 'video',       items: Mock.videos ?? [] },
+      { resource: 'short',       items: Mock.shorts ?? [] },
       { resource: 'opportunity', items: Mock.opportunities ?? [] },
+      { resource: 'dossier',     items: seedDossiers ?? [] },
+      { resource: 'program',     items: seedPrograms ?? [] },
       { resource: 'price',       items: Mock.prices ?? [] },
+      { resource: 'wb_track',    items: seedTracks ?? [] },
     ];
     let inserted = 0, skipped = 0, failed = 0;
     for (const b of buckets) {

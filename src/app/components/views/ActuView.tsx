@@ -86,9 +86,9 @@ export function ActuView({ onOpenArticle, onOpenSection, onOpenDossier }: Props)
           {featured && (
           <section className="px-5 pt-1">
             <button onClick={() => onOpenArticle(featured)} className="block w-full text-left relative overflow-hidden aspect-[4/5]" style={{ borderRadius: 'var(--r-lg)' }}>
-              <ImageWithFallback src={optimizedUnsplash(featured.image, 1200, 75)} alt={featured.title} className="w-full h-full object-cover" loading="lazy" decoding="async"/>
-              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.85) 100%)' }}/>
-              <div className="absolute inset-x-0 bottom-0 p-5">
+              <ImageWithFallback src={optimizedUnsplash(featured.image, 1200, 75)} alt={featured.title} className="w-full h-full object-cover object-top" loading="lazy" decoding="async"/>
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.85) 100%)' }}/>
+              <div className="absolute inset-x-0 bottom-0 p-5 pb-6">
                 <span className="inline-block px-2.5 py-1 mb-3" style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', color: 'white', fontFamily: 'Inter, sans-serif', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', borderRadius: 999 }}>
                   {tc.article(featured.id, 'category', featured.category).toUpperCase()} · {featured.location.toUpperCase()}
                 </span>

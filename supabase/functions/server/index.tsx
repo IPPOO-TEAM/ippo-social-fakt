@@ -180,6 +180,43 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+// Base PUBLIQUE (externe) pour les URLs d'assets servis au navigateur. En
+// auto-hébergé, SUPABASE_URL pointe souvent vers Kong en interne (injoignable
+// depuis l'extérieur) ; on privilégie donc une URL publique explicite.
+const PUBLIC_BASE = (
+  Deno.env.get("SUPABASE_PUBLIC_URL") ||
+  Deno.env.get("STORAGE_PUBLIC_URL") ||
+  Deno.env.get("APP_PUBLIC_SUPABASE_URL") ||
+  SUPABASE_URL ||
+  ""
+).replace(/\/+$/, "");
+
+function publicAssetUrl(path: string): string {
+  return `${PUBLIC_BASE}/storage/v1/object/public/${PUBLIC_BUCKET}/${path}`;
+}
+
+// Réécrit toute URL de storage pointant vers un hôte INTERNE (kong/localhost/
+// SUPABASE_URL interne) vers la base PUBLIQUE, afin que les assets déjà publiés
+// avec une mauvaise URL redeviennent joignables côté navigateur. Idempotent.
+function fixAssetUrl(v: unknown): unknown {
+  if (typeof v !== "string") return v;
+  const i = v.indexOf("/storage/v1/object/");
+  if (i <= 0) return v;
+  // Garde uniquement le chemin storage et le repréfixe avec la base publique.
+  const tail = v.slice(i);
+  if (!PUBLIC_BASE) return v;
+  return `${PUBLIC_BASE}${tail}`;
+}
+const ASSET_FIELDS = ["image", "audio", "audioUrl", "video", "videoUrl", "cover", "thumbnail"];
+function rewriteAssetUrls<T>(item: T): T {
+  if (!item || typeof item !== "object") return item;
+  const obj = item as Record<string, unknown>;
+  for (const f of ASSET_FIELDS) {
+    if (f in obj) obj[f] = fixAssetUrl(obj[f]);
+  }
+  return item;
+}
+
 // Idempotently create both buckets on cold start. Private bucket holds
 // user-owned assets (avatars, drafts) gated by signed URLs. Public bucket
 // holds CMS media (article images, episode audio, video covers) referenced
@@ -608,6 +645,7 @@ app.get(`${PREFIX}/content/:resource`, async (c) => {
       const tb = Date.parse(b?.updatedAt ?? b?.createdAt ?? "") || 0;
       return tb - ta;
     });
+    visible.forEach(rewriteAssetUrls);
     const page = readPage(c);
     return c.json(paginate(visible, page));
   } catch (e) {
@@ -628,7 +666,7 @@ app.get(`${PREFIX}/content/:resource/:id`, async (c) => {
   const item = await kv.get(`${resource}:${id}`);
   if (!item) return c.json({ error: "not found" }, 404);
   if (!isAdmin && !isPublished(item)) return c.json({ error: "not found" }, 404);
-  return c.json({ item });
+  return c.json({ item: rewriteAssetUrls(item) });
 });
 
 // Admin write — create/update
@@ -859,8 +897,11 @@ app.post(`${PREFIX}/storage/upload-public`, async (c) => {
       contentType, upsert: false, cacheControl: "public, max-age=31536000, immutable",
     });
     if (error) return c.json({ error: error.message }, 500);
-    const { data: pub } = supabaseAdmin.storage.from(PUBLIC_BUCKET).getPublicUrl(path);
-    return c.json({ path, url: pub.publicUrl, kind });
+    // En auto-hébergé, `SUPABASE_URL` côté serveur est souvent l'URL INTERNE
+    // (http://kong:8000) → getPublicUrl renverrait une URL injoignable par le
+    // navigateur des utilisateurs. On construit donc l'URL à partir d'une base
+    // PUBLIQUE explicite (domaine externe).
+    return c.json({ path, url: publicAssetUrl(path), kind });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
   }

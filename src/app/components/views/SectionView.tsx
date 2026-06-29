@@ -66,8 +66,8 @@ export function SectionView({ section, onBack, onOpenArticle, onOpenVideo, onPla
       transition={{ type: 'spring', damping: 32, stiffness: 320 }}
       className="fixed inset-0 z-[55] bg-white max-w-2xl mx-auto flex flex-col overflow-y-auto"
     >
-      <div className="relative text-white px-5 pt-4 pb-6 overflow-hidden" style={{ background: section.color, minHeight: 220 }}>
-        <ImageWithFallback src={section.hero} alt="" className="absolute inset-0 w-full h-full object-cover opacity-60"/>
+      <div className="relative text-white px-5 pb-6 overflow-hidden" style={{ background: section.color, minHeight: 220, paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
+        <ImageWithFallback src={section.hero} alt="" className="absolute inset-0 w-full h-full object-cover object-center opacity-60"/>
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ background: `linear-gradient(180deg, ${section.color}66 0%, ${section.color}D9 70%, ${section.color} 100%)` }}

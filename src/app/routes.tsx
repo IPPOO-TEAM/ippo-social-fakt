@@ -51,6 +51,7 @@ const PricingView = lazy(() => import('./components/views/PricingView').then((m)
 const CheckoutView = lazy(() => import('./components/views/CheckoutView').then((m) => ({ default: m.CheckoutView })));
 const SubscriptionView = lazy(() => import('./components/views/SubscriptionView').then((m) => ({ default: m.SubscriptionView })));
 const PageView = lazy(() => import('./components/views/PageView').then((m) => ({ default: m.PageView })));
+const NotificationsView = lazy(() => import('./components/views/NotificationsView').then((m) => ({ default: m.NotificationsView })));
 
 import { findAssurance } from './data/assurances';
 import { dossiersData } from './data/dossiers';
@@ -687,6 +688,15 @@ function SubscriptionRoute() {
   );
 }
 
+function NotificationsRoute() {
+  const navigate = useNavigate();
+  return (
+    <AnimatePresence>
+      <NotificationsView onBack={() => navigate(-1)} />
+    </AnimatePresence>
+  );
+}
+
 function NowPlayingRoute() {
   const navigate = useNavigate();
   const { track, playing, setPlaying } = usePlayer();
@@ -793,6 +803,7 @@ export const router = createBrowserRouter([
       { path: 'checkout/:planId', Component: CheckoutRoute },
       { path: 'subscription', Component: SubscriptionRoute },
       { path: 'now-playing', Component: NowPlayingRoute },
+      { path: 'notifications', Component: NotificationsRoute },
       { path: 'pages/:slug', Component: PageView },
       { path: '*', Component: NotFoundRoute },
     ],

@@ -11,7 +11,10 @@ export interface Notif {
   iconKey: 'news' | 'podcast' | 'event' | 'alert' | 'opportunity';
   color: string;
   title: string;
+  body?: string;
+  url?: string;
   time: string;
+  sentAt?: number;
   read: boolean;
 }
 
@@ -50,7 +53,10 @@ function fromInbox(n: InboxNotif): Notif {
     iconKey: (n.iconKey as Notif['iconKey']) ?? 'news',
     color: n.color ?? '#0066FF',
     title: n.title,
+    body: n.body,
+    url: n.url,
     time,
+    sentAt: n.sentAt,
     read: n.read,
   };
 }

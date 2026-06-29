@@ -73,8 +73,8 @@ export function VideosView({ onOpenVideo }: Props) {
       {featured && (
       <section className="px-5 pt-1">
         <button onClick={() => onOpenVideo(featured)} className="block w-full text-left relative overflow-hidden aspect-[4/5]" style={{ borderRadius: 'var(--r-lg)' }}>
-          <ImageWithFallback src={featured.image} alt={featured.title} className="w-full h-full object-cover"/>
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.85) 100%)' }}/>
+          <ImageWithFallback src={featured.image} alt={featured.title} className="w-full h-full object-cover object-center"/>
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.25) 0%, transparent 28%, transparent 55%, rgba(0,0,0,0.85) 100%)' }}/>
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
             <span className="inline-block px-2.5 py-1" style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', color: 'white', fontFamily: 'Inter, sans-serif', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.12em', borderRadius: 999 }}>
               {tc.video(featured.id, 'type', featured.type).toUpperCase()}
@@ -88,7 +88,7 @@ export function VideosView({ onOpenVideo }: Props) {
               <Play size={22} className="fill-[#0066FF] ml-1" style={{ color: '#0066FF' }} />
             </div>
           </div>
-          <div className="absolute inset-x-0 bottom-0 p-5">
+          <div className="absolute inset-x-0 bottom-0 p-5 pb-6">
             <h2 className="text-white" style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 800, fontSize: '1.5rem', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
               {tc.video(featured.id, 'title', featured.title)}
             </h2>

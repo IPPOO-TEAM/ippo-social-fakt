@@ -38,11 +38,11 @@ export function ServicesView({ onOpenSection, onOpenOpportunity, onOpenAssurance
  return (
  <div className="pb-8">
  {/* Header */}
- <div className="relative text-white px-5 pt-5 pb-8 overflow-hidden flex flex-col" style={{ minHeight: 240, borderBottomLeftRadius: 'var(--r-xl)', borderBottomRightRadius: 'var(--r-xl)' }}>
+ <div className="relative text-white px-5 pb-8 overflow-hidden flex flex-col" style={{ minHeight: 240, paddingTop: 'calc(1.25rem + env(safe-area-inset-top))', borderBottomLeftRadius: 'var(--r-xl)', borderBottomRightRadius: 'var(--r-xl)' }}>
  <ImageWithFallback
  src="https://images.unsplash.com/photo-1531206715517-5c0ba140b2b8?w=1600&q=80"
  alt=""
- className="absolute inset-0 w-full h-full object-cover"
+ className="absolute inset-0 w-full h-full object-cover object-center"
  />
  <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(15,15,18,0.92) 0%, rgba(44,15,31,0.85) 55%, rgba(15,31,22,0.85) 100%)' }}/>
  <div className="absolute -top-16 -right-16 w-56 h-56 bg-[#FF3FA4]/40 blur-3xl pointer-events-none"/>
@@ -182,8 +182,8 @@ export function ServicesView({ onOpenSection, onOpenOpportunity, onOpenAssurance
  style={{ borderRadius: 'var(--r-xl)' }}
  >
  <div className="relative aspect-[16/9]">
- <ImageWithFallback src={featured.image} alt={featured.title} className="w-full h-full object-cover"/>
- <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, transparent 30%, ${featured.color}E6 100%)` }}/>
+ <ImageWithFallback src={featured.image} alt={featured.title} className="w-full h-full object-cover object-center"/>
+ <div className="absolute inset-0" style={{ background: `linear-gradient(180deg, rgba(0,0,0,0.25) 0%, transparent 30%, ${featured.color}E6 100%)` }}/>
  <div className="absolute top-3 left-3 px-2.5 py-1 bg-white/95 backdrop-blur" style={{ borderRadius: 999, fontFamily: 'Inter, sans-serif', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', color: featured.color }}>
  {featured.tag.toUpperCase()}
  </div>

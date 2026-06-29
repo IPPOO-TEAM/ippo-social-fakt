@@ -347,11 +347,11 @@ export function ConsommationView({ onBack, onOpenArticle }: Props) {
       className="fixed inset-0 z-[55] bg-white max-w-2xl mx-auto flex flex-col overflow-y-auto"
     >
       {/* Hero */}
-      <div className="relative text-white px-5 pt-4 pb-16 overflow-hidden flex flex-col" style={{ minHeight: 340, borderBottomLeftRadius: 'var(--r-xl)', borderBottomRightRadius: 'var(--r-xl)' }}>
+      <div className="relative text-white px-5 pb-16 overflow-hidden flex flex-col" style={{ minHeight: 340, paddingTop: 'calc(1rem + env(safe-area-inset-top))', borderBottomLeftRadius: 'var(--r-xl)', borderBottomRightRadius: 'var(--r-xl)' }}>
         <ImageWithFallback
           src="https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=1600&q=80"
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(255,63,164,0.85) 0%, rgba(255,138,0,0.85) 100%)' }}/>
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-white/15 blur-3xl pointer-events-none"/>

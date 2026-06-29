@@ -1,6 +1,7 @@
-import { Bell, X, Search, User, Menu, CheckCheck } from 'lucide-react';
+import { Bell, X, Search, User, Menu, CheckCheck, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useNavigate } from 'react-router';
 import logoUrl from '../../imports/social_fakt_fav.jpg';
 import { useNotifications, notifIcon } from '../lib/notifications';
 import { useT } from '../lib/i18n';
@@ -18,6 +19,7 @@ export function AppHeader({ title, onOpenSearch, onOpenProfile, onOpenMenu }: Pr
   const [notifOpen, setNotifOpen] = useState(false);
   const { items: notifications, unread, markRead, markAllRead } = useNotifications();
   const t = useT();
+  const navigate = useNavigate();
 
   // Le header est toujours sur fond blanc opaque : on force les icônes en
   // sombre pour rester lisibles, y compris en mode sombre.
@@ -138,6 +140,13 @@ export function AppHeader({ title, onOpenSearch, onOpenProfile, onOpenMenu }: Pr
                   );
                 })}
               </div>
+              <button
+                onClick={() => { setNotifOpen(false); navigate('/notifications'); }}
+                className="w-full flex items-center justify-center gap-1 px-4 py-3"
+                style={{ borderTop: '1px solid var(--border)', color: 'var(--x-blue, #1D9BF0)', fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', fontWeight: 700 }}
+              >
+                Voir toutes les notifications <ChevronRight size={14} />
+              </button>
             </motion.div>
           </>
         )}

@@ -37,7 +37,7 @@ export function PodcastView({ onPlay }: Props) {
  };
  return (
  <div className="pb-6">
- <div className="px-5 pt-5">
+ <div className="px-5 pt-5" style={{ paddingTop: 'calc(1.25rem + env(safe-area-inset-top))' }}>
  <div className="text-[#717182]" style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
  {t('title.podcast')}
  </div>
@@ -47,6 +47,7 @@ export function PodcastView({ onPlay }: Props) {
  </div>
 
  {/* Reprendre l'écoute */}
+ {episodes[1] && (
  <section className="px-5 mt-5">
  <div className="flex items-center gap-2 mb-3">
  <History size={14} className="text-[#0066FF]"/>
@@ -75,6 +76,7 @@ export function PodcastView({ onPlay }: Props) {
  </div>
  </button>
  </section>
+ )}
 
  {/* Émissions */}
  <section className="mt-6">
